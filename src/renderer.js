@@ -1587,9 +1587,6 @@ async function handleManualRefresh() {
     // Recarrega os dados do dashboard
     await loadDashboardData();
     
-    // Aguarda os tickers serem carregados novamente
-    await waitForAllTickersLoaded();
-    
     showNotification('Dados atualizados com sucesso!', 'success');
     
     if (refreshStatus) {
