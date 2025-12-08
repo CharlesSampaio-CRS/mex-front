@@ -911,71 +911,62 @@ function updateDashboardBalances(balances) {
     balances.exchanges.forEach(exchange => {
       if (exchange.tokens) {
         
-        // Soma BRL
+        // Soma BRL (força conversão para número)
         if (exchange.tokens.BRL) {
-          totalBRL += exchange.tokens.BRL.amount || 0;
+          totalBRL += parseFloat(exchange.tokens.BRL.amount) || 0;
         }
-        // Soma USDT
+        // Soma USDT (força conversão para número)
         if (exchange.tokens.USDT) {
-          totalUSDT += exchange.tokens.USDT.amount || 0;
+          totalUSDT += parseFloat(exchange.tokens.USDT.amount) || 0;
         }
-        // Soma USDC
+        // Soma USDC (força conversão para número)
         if (exchange.tokens.USDC) {
-          totalUSDC += exchange.tokens.USDC.amount || 0;
+          totalUSDC += parseFloat(exchange.tokens.USDC.amount) || 0;
         }
       }
     });
   }
   
-  // Atualiza cards individuais com conversão BRL
-  const showBRL = appState.showBRL;
-  const brlMultiplier = 5.07; // Taxa de conversão USD para BRL
+  // Atualiza cards individuais SEM conversão
+  const brlMultiplier = 5.07; // Taxa de conversão USD para BRL (apenas para comparação)
   
-  // Card BRL - sempre em BRL
+  // Card BRL - sempre em BRL (arredonda para 0 se menor que 1 centavo)
   const brlEl = document.getElementById('dashboard-brl');
   if (brlEl) {
-    brlEl.textContent = totalBRL > 0 
+    brlEl.textContent = totalBRL >= 0.01 
       ? `R$ ${formatNumber(totalBRL)}` 
       : 'R$ 0,00';
   }
   
-  // Card USDT - converte se toggle ativo
+  // Card USDT - sempre em USD (sem conversão)
   const usdtEl = document.getElementById('dashboard-usdt');
   if (usdtEl) {
-    if (showBRL && totalUSDT > 0) {
-      usdtEl.textContent = `R$ ${formatNumber(totalUSDT * brlMultiplier)}`;
-    } else {
-      usdtEl.textContent = totalUSDT > 0 ? `$ ${formatNumber(totalUSDT)}` : '$0.00';
-    }
+    usdtEl.textContent = totalUSDT > 0 ? `$ ${formatNumber(totalUSDT)}` : '$0.00';
   }
   
-  // Card USDC - converte se toggle ativo
+  // Card USDC - sempre em USD (sem conversão)
   const usdcEl = document.getElementById('dashboard-usdc');
   if (usdcEl) {
-    if (showBRL && totalUSDC > 0) {
-      usdcEl.textContent = `R$ ${formatNumber(totalUSDC * brlMultiplier)}`;
-    } else {
-      usdcEl.textContent = totalUSDC > 0 ? `$ ${formatNumber(totalUSDC)}` : '$0.00';
-    }
+    usdcEl.textContent = totalUSDC > 0 ? `$ ${formatNumber(totalUSDC)}` : '$0.00';
   }
   
-  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC, showBRL });
-  console.log('💱 Taxa BRL:', brlMultiplier);
+  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC });
   
-  // Reordena cards por valor (maior para menor, da esquerda para direita)
-  // Normaliza todos os valores para USD para comparação justa
-  const brlToUSD = totalBRL / brlMultiplier; // Converte BRL para USD
+  // Reordena cards: valores > 0 primeiro (ordenados por valor USD), depois os zerados
+  const brlToUSD = totalBRL / brlMultiplier; // Converte BRL para USD para comparação
   const valuesToCompare = {
     totalUSD,           // Total já está em USD
-    totalBRL: brlToUSD, // BRL convertido para USD
+    totalBRL: brlToUSD, // BRL convertido para USD (apenas para comparação)
     totalUSDT,          // USDT já está em USD
     totalUSDC           // USDC já está em USD
   };
-  console.log('📊 Valores para comparação (em USD):', valuesToCompare);
+  console.log('📊 Valores para ordenação (em USD):', valuesToCompare);
+  console.log('📊 BRL original:', totalBRL, 'BRL em USD:', brlToUSD);
   reorderCardsByValue(valuesToCompare);
 }
 
 // Função para reordenar cards por valor
+// Cards com valor > 0 primeiro (ordenados), depois os zerados
 function reorderCardsByValue(values) {
   const container = document.querySelector('#dashboard-view > div.mb-6');
   if (!container) {
@@ -1000,15 +991,25 @@ function reorderCardsByValue(values) {
   cards[2].element = allCards.find(el => el.querySelector('#dashboard-usdt'));
   cards[3].element = allCards.find(el => el.querySelector('#dashboard-usdc'));
   
-  // Ordena por valor (maior primeiro)
-  cards.sort((a, b) => b.value - a.value);
+  // Separa cards com valor > 0 e valor = 0
+  const cardsWithValue = cards.filter(c => c.value > 0).sort((a, b) => b.value - a.value);
+  const cardsWithoutValue = cards.filter(c => c.value === 0);
   
-  console.log('✅ Cards após ordenar:', cards.map(c => ({ id: c.id, value: c.value })));
+  console.log('📈 Cards COM valor (>0):', cardsWithValue.map(c => ({ id: c.id, value: c.value })));
+  console.log('📉 Cards SEM valor (=0):', cardsWithoutValue.map(c => ({ id: c.id, value: c.value })));
+  
+  // Combina: primeiro os com valor (maior para menor), depois os zerados
+  const sortedCards = [...cardsWithValue, ...cardsWithoutValue];
+  
+  console.log('✅ Cards após ordenar:', sortedCards.map(c => ({ id: c.id, value: c.value })));
   
   // Reordena os elementos no DOM
-  cards.forEach(card => {
+  sortedCards.forEach((card, index) => {
     if (card.element) {
+      console.log(`📌 Movendo card ${card.id} para posição ${index + 1}`);
       container.appendChild(card.element);
+    } else {
+      console.warn(`⚠️ Card ${card.id} não tem elemento!`);
     }
   });
 }
