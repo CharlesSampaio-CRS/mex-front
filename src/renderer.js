@@ -42,7 +42,7 @@ async function loadViewData(viewName) {
         await loadHistoryData('7d');
         break;
       case 'settings':
-        // Settings não precisa carregar dados
+        loadSettingsData();
         break;
       case 'orders':
         // TODO: Implementar carregamento de orders
@@ -77,6 +77,13 @@ async function loadDashboardData() {
         skipTickerRefresh: false,
         autoExpand: true
       });
+      
+      // Aguarda o carregamento de todos os tickers antes de finalizar
+      if (appState.tickerPromises) {
+        console.log('⏳ Aguardando carregamento de tickers...');
+        await appState.tickerPromises;
+        console.log('✅ Todos os tickers carregados');
+      }
     } else {
       // Fallback: renderiza exchanges simples
       console.warn('⚠️ renderDashboardExchangesWithBalances não encontrada, usando fallback');
