@@ -664,6 +664,7 @@ function renderDashboardExchanges(exchanges) {
 function renderDashboardExchangesWithBalances(exchanges, balances, options = {}) {
   console.log('📊 renderDashboardExchangesWithBalances chamada');
   const container = document.getElementById('dashboard-exchanges-list');
+  const { skipTickerRefresh = false, autoExpand = false } = options;
   
   if (!container) {
     console.error('❌ Container dashboard-exchanges-list não encontrado');
@@ -707,30 +708,84 @@ function renderDashboardExchangesWithBalances(exchanges, balances, options = {})
     const iconPath = getExchangeIcon(ex.ccxt_id || ex.exchange_name);
     
     return `
-      <div class="card hover:shadow-xl transition-shadow">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
-            <div class="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-white to-gray-100 p-2.5 flex items-center justify-center flex-shrink-0 shadow-lg border border-dark-600">
-              <img src="${iconPath}" alt="${ex.exchange_name}" class="w-full h-full object-contain" 
-                   onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'text-2xl\'>${totalUSD > 0 ? '💰' : '🔗'}</span>';">
-            </div>
-            <div>
-              <h3 class="font-bold text-dark-100 text-lg">${ex.exchange_name}</h3>
-              <div class="flex items-center space-x-2 mt-1">
-                <span class="text-xs text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded-full">${tokenCount} tokens</span>
-                <span class="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">${tokensWithValue} com valor</span>
+      <div class="exchange-card animate-slide-up">
+        <!-- Exchange Header - Clicável -->
+        <div class="exchange-header" data-exchange-id="${ex.exchange_id}">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <div class="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-white to-gray-100 p-2.5 flex items-center justify-center flex-shrink-0 shadow-lg border border-dark-600 transform transition-transform duration-300 hover:scale-110">
+                <img src="${iconPath}" alt="${ex.exchange_name}" class="w-full h-full object-contain" 
+                     onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'text-2xl\'>${totalUSD > 0 ? '💰' : '🔗'}</span>';">
+              </div>
+              <div>
+                <h3 class="font-bold text-dark-100 text-lg tracking-tight">${ex.exchange_name}</h3>
+                <div class="flex items-center space-x-2 mt-1">
+                  <span class="text-xs text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded-full">${tokenCount} tokens</span>
+                  <span class="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">${tokensWithValue} com valor</span>
+                </div>
               </div>
             </div>
+            <div class="text-right">
+              <p class="text-2xl font-bold ${totalUSD > 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500' : 'text-dark-400'}">
+                ${formatCurrency(totalUSD)}
+              </p>
+              <span class="text-primary-400 text-xs mt-2 inline-flex items-center space-x-1 hover:text-primary-300 transition-colors">
+                <span id="toggle-icon-${ex.exchange_id}" class="transform transition-transform duration-300">▼</span>
+                <span>Ver detalhes</span>
+              </span>
+            </div>
           </div>
-          <div class="text-right">
-            <p class="text-2xl font-bold ${totalUSD > 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500' : 'text-dark-400'}">
-              ${formatCurrency(totalUSD)}
-            </p>
+        </div>
+        
+        <!-- Exchange Details - Expansível -->
+        <div id="details-${ex.exchange_id}" class="hidden bg-dark-800/30 backdrop-blur-sm animate-slide-down">
+          <div class="p-4">
+            ${tokenCount > 0 ? renderTokensList(tokens, ex.exchange_id, ex.exchange_name) : '<p class="text-dark-400 text-center py-4">Nenhum token</p>'}
           </div>
         </div>
       </div>
     `;
   }).join('');
+  
+  // Adiciona event listeners após renderizar
+  document.querySelectorAll('.exchange-header').forEach(header => {
+    header.addEventListener('click', function() {
+      const exchangeId = this.getAttribute('data-exchange-id');
+      toggleExchangeDetails(exchangeId);
+    });
+  });
+  
+  // Adiciona event listeners para tokens (modal)
+  document.querySelectorAll('.token-row').forEach(row => {
+    row.addEventListener('click', function() {
+      const symbol = this.getAttribute('data-token-symbol');
+      const exchangeId = this.getAttribute('data-exchange-id');
+      const exchangeName = this.getAttribute('data-exchange-name');
+      const tokenData = JSON.parse(this.getAttribute('data-token-data'));
+      showTokenModal(symbol, tokenData, exchangeId, exchangeName);
+    });
+  });
+  
+  // Carrega variações de preço (tickers) para todas as exchanges
+  if (!skipTickerRefresh) {
+    const tickerPromises = filteredExchanges.map(ex => {
+      const balance = balanceMap[ex.exchange_id];
+      if (balance && balance.tokens) {
+        return fetchAllTokenTickersForExchange(ex.exchange_id, balance.tokens);
+      }
+      return Promise.resolve();
+    });
+    
+    // Armazena as promises no appState para aguardar no loading se necessário
+    appState.tickerPromises = Promise.all(tickerPromises);
+  }
+  
+  // Auto-expande exchanges se solicitado
+  if (autoExpand) {
+    setTimeout(() => {
+      autoExpandExchanges();
+    }, 100);
+  }
   
   console.log(`✅ Renderizadas ${filteredExchanges.length} exchanges no dashboard`);
 }
@@ -2104,6 +2159,20 @@ function updateTimestamp() {
   const timestampEl = document.getElementById('last-update');
   if (timestampEl) {
     timestampEl.textContent = timeString;
+  }
+}
+
+// Função auxiliar para atualizar mensagem de loading
+function updateLoadingMessage(message, progressPercent) {
+  const loadingMessage = document.getElementById('loading-message');
+  const loadingProgress = document.getElementById('loading-progress');
+  
+  if (loadingMessage) {
+    loadingMessage.textContent = message;
+  }
+  
+  if (loadingProgress && progressPercent !== undefined) {
+    loadingProgress.style.width = `${progressPercent}%`;
   }
 }
 
