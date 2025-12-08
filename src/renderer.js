@@ -79,12 +79,36 @@ async function loadDashboardData() {
       });
     } else {
       // Fallback: renderiza exchanges simples
+      console.warn('⚠️ renderDashboardExchangesWithBalances não encontrada, usando fallback');
       renderDashboardExchanges(appState.linkedExchanges);
     }
     
+    console.log('✅ Dashboard carregado com sucesso');
+    
   } catch (error) {
     console.error('❌ Erro ao carregar dashboard:', error);
-    showNotification('Erro ao carregar dashboard. API offline?', 'error');
+    
+    // Renderiza mensagem de erro no dashboard
+    const exchangesList = document.getElementById('dashboard-exchanges-list');
+    if (exchangesList) {
+      exchangesList.innerHTML = `
+        <div class="text-center py-8">
+          <p class="text-red-400 mb-2">❌ Erro ao carregar dados</p>
+          <p class="text-dark-400 text-sm mb-4">${error.message || 'API offline?'}</p>
+          <button class="btn-primary text-sm" onclick="loadDashboardData()">
+            🔄 Tentar Novamente
+          </button>
+        </div>
+      `;
+    }
+    
+    // Atualiza total com zero
+    const totalElement = document.getElementById('dashboard-total');
+    if (totalElement) {
+      totalElement.textContent = '$0.00';
+      totalElement.classList.remove('text-green-400');
+      totalElement.classList.add('text-red-400');
+    }
   }
 }
 
@@ -353,10 +377,14 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
                   const tickerProgress = (appState.tickersLoading.loaded / appState.tickersLoading.total);
                   const totalProgress = 50 + (tickerProgress * 45); // 50% inicial + 45% para tickers
                   
-                  updateLoadingMessage(
-                    `Carregando preços: ${appState.tickersLoading.loaded}/${appState.tickersLoading.total}`,
-                    Math.round(totalProgress)
-                  );
+                  // Só atualiza a barra de loading se ainda existir
+                  const loadingScreen = document.getElementById('loading-screen');
+                  if (loadingScreen && loadingScreen.style.display !== 'none') {
+                    updateLoadingMessage(
+                      `Carregando preços: ${appState.tickersLoading.loaded}/${appState.tickersLoading.total}`,
+                      Math.round(totalProgress)
+                    );
+                  }
                   
                   console.log(`✅ Ticker atualizado para ${symbol}: 1h=${exchange.tokens[symbol].change_1h}%, 4h=${exchange.tokens[symbol].change_4h}%, 24h=${exchange.tokens[symbol].change_24h}%`);
                   
@@ -2210,6 +2238,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(updateTimestamp, 1000);
     updateTimestamp();
     console.log('✅ Timestamp iniciado');
+    
+    // Inicia auto-update
+    startAutoUpdate();
+    console.log('✅ Auto-update iniciado');
     
   } catch (error) {
     console.error('❌ Erro ao inicializar aplicação:', error);
