@@ -960,6 +960,7 @@ function updateDashboardBalances(balances) {
   }
   
   console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC, showBRL });
+  console.log('💱 Taxa BRL:', brlMultiplier);
   
   // Reordena cards por valor (maior para menor, da esquerda para direita)
   // Normaliza todos os valores para USD para comparação justa
@@ -970,13 +971,17 @@ function updateDashboardBalances(balances) {
     totalUSDT,          // USDT já está em USD
     totalUSDC           // USDC já está em USD
   };
+  console.log('📊 Valores para comparação (em USD):', valuesToCompare);
   reorderCardsByValue(valuesToCompare);
 }
 
 // Função para reordenar cards por valor
 function reorderCardsByValue(values) {
   const container = document.querySelector('#dashboard-view > div.mb-6');
-  if (!container) return;
+  if (!container) {
+    console.warn('⚠️ Container de cards não encontrado');
+    return;
+  }
   
   // Cria array com informações dos cards
   const cards = [
@@ -985,6 +990,8 @@ function reorderCardsByValue(values) {
     { id: 'usdt', value: values.totalUSDT, element: null },
     { id: 'usdc', value: values.totalUSDC, element: null }
   ];
+  
+  console.log('🔄 Cards antes de ordenar:', cards.map(c => ({ id: c.id, value: c.value })));
   
   // Pega os elementos dos cards
   const allCards = Array.from(container.children);
@@ -995,6 +1002,8 @@ function reorderCardsByValue(values) {
   
   // Ordena por valor (maior primeiro)
   cards.sort((a, b) => b.value - a.value);
+  
+  console.log('✅ Cards após ordenar:', cards.map(c => ({ id: c.id, value: c.value })));
   
   // Reordena os elementos no DOM
   cards.forEach(card => {
@@ -1985,9 +1994,12 @@ function setupEventListeners() {
     showBRLToggle.addEventListener('change', () => {
       const showBRL = showBRLToggle.checked;
       
-      console.log('🔄 Toggle BRL alterado:', showBRL ? 'BRL' : 'USD');
+      console.log('� Toggle BRL alterado:', showBRL ? 'BRL ATIVADO ✅' : 'USD ATIVADO ❌');
+      console.log('💱 appState.showBRL antes:', appState.showBRL);
       appState.showBRL = showBRL;
+      console.log('💱 appState.showBRL depois:', appState.showBRL);
       localStorage.setItem('showBRL', showBRL);
+      console.log('💱 Chamando refreshCurrencySensitiveViews...');
       refreshCurrencySensitiveViews();
       const currencyName = showBRL ? 'BRL (R$)' : 'USD ($)';
       showNotification(`Moeda alterada para ${currencyName}`, 'success');
