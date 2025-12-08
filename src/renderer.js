@@ -905,8 +905,57 @@ function renderDashboardExchangesWithBalances(exchanges, balances, options = {})
 function updateDashboardBalances(balances) {
   const totalUSD = balances.summary?.total_usd || 0;
   
+  // Atualiza total geral
   const totalEl = document.getElementById('dashboard-total');
   if (totalEl) totalEl.textContent = formatCurrency(totalUSD);
+  
+  // Calcula totais de BRL, USDT e USDC somando todas as exchanges
+  let totalBRL = 0;
+  let totalUSDT = 0;
+  let totalUSDC = 0;
+  
+  if (balances.exchanges && Array.isArray(balances.exchanges)) {
+    balances.exchanges.forEach(exchange => {
+      if (exchange.tokens) {
+        // Soma BRL
+        if (exchange.tokens.BRL) {
+          totalBRL += exchange.tokens.BRL.amount || 0;
+        }
+        // Soma USDT
+        if (exchange.tokens.USDT) {
+          totalUSDT += exchange.tokens.USDT.amount || 0;
+        }
+        // Soma USDC
+        if (exchange.tokens.USDC) {
+          totalUSDC += exchange.tokens.USDC.amount || 0;
+        }
+      }
+    });
+  }
+  
+  // Atualiza cards individuais
+  const brlEl = document.getElementById('dashboard-brl');
+  if (brlEl) {
+    brlEl.textContent = totalBRL > 0 
+      ? `R$ ${formatNumber(totalBRL)}` 
+      : 'R$ 0,00';
+  }
+  
+  const usdtEl = document.getElementById('dashboard-usdt');
+  if (usdtEl) {
+    usdtEl.textContent = totalUSDT > 0 
+      ? formatNumber(totalUSDT) 
+      : '0.00';
+  }
+  
+  const usdcEl = document.getElementById('dashboard-usdc');
+  if (usdcEl) {
+    usdcEl.textContent = totalUSDC > 0 
+      ? formatNumber(totalUSDC) 
+      : '0.00';
+  }
+  
+  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC });
 }
 
 // ==================== EXCHANGES ====================
