@@ -25,6 +25,28 @@ const appState = {
   exchangeDetailsCache: {}
 };
 
+// Lista de moedas fiduciárias e stablecoins
+const FIAT_CURRENCIES = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'ARS', 'MXN'];
+const STABLECOINS = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP', 'USDD', 'GUSD', 'PYUSD', 'FDUSD'];
+
+// Função para verificar se é moeda fiduciária ou stablecoin
+function isFiatOrStablecoin(symbol) {
+  const upperSymbol = symbol.toUpperCase();
+  return FIAT_CURRENCIES.includes(upperSymbol) || STABLECOINS.includes(upperSymbol);
+}
+
+// Função para obter o tipo de moeda
+function getCurrencyType(symbol) {
+  const upperSymbol = symbol.toUpperCase();
+  if (FIAT_CURRENCIES.includes(upperSymbol)) {
+    return { type: 'fiat', label: '💵 Moeda Fiduciária', description: 'Não possui variação de mercado' };
+  }
+  if (STABLECOINS.includes(upperSymbol)) {
+    return { type: 'stablecoin', label: '🔒 Stablecoin', description: 'Atrelada a moeda fiduciária' };
+  }
+  return null;
+}
+
 async function loadViewData(viewName) {
   console.log('📂 loadViewData chamado:', viewName);
   try {
@@ -141,6 +163,10 @@ function renderTokensList(tokens, exchangeId, exchangeName) {
       ${sortedTokens.length > 0 ? sortedTokens.map(([symbol, token]) => {
         const hasValue = token.value_usd > 0;
         
+        // Verifica se é moeda fiduciária ou stablecoin
+        const currencyInfo = getCurrencyType(symbol);
+        const isFiatStable = currencyInfo !== null;
+        
         // Extrai variações se já tiverem sido carregadas
         const change1h = token.change_1h;
         const change4h = token.change_4h;
@@ -163,21 +189,27 @@ function renderTokensList(tokens, exchangeId, exchangeName) {
                 <div class="flex items-center space-x-2 mt-0.5">
                   <span class="text-xs text-dark-500">${formatNumber(token.amount)}</span>
                   <div class="flex items-center space-x-2 ticker-variations" data-symbol="${symbol}">
-                    ${change1h !== undefined && change1h !== null ? `
-                      <span class="text-[10px] px-1 py-0.5 rounded ${change1h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="1 hora">
-                        1h: ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(1)}%
+                    ${isFiatStable ? `
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30" title="${currencyInfo.description}">
+                        ${currencyInfo.label}
                       </span>
-                    ` : ''}
-                    ${change4h !== undefined && change4h !== null ? `
-                      <span class="text-[10px] px-1 py-0.5 rounded ${change4h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="4 horas">
-                        4h: ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(1)}%
-                      </span>
-                    ` : ''}
-                    ${change24h !== undefined && change24h !== null ? `
-                      <span class="text-[10px] px-1 py-0.5 rounded ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="24 horas">
-                        24h: ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(1)}%
-                      </span>
-                    ` : ''}
+                    ` : `
+                      ${change1h !== undefined && change1h !== null ? `
+                        <span class="text-[10px] px-1 py-0.5 rounded ${change1h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="1 hora">
+                          1h: ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(1)}%
+                        </span>
+                      ` : ''}
+                      ${change4h !== undefined && change4h !== null ? `
+                        <span class="text-[10px] px-1 py-0.5 rounded ${change4h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="4 horas">
+                          4h: ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(1)}%
+                        </span>
+                      ` : ''}
+                      ${change24h !== undefined && change24h !== null ? `
+                        <span class="text-[10px] px-1 py-0.5 rounded ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="24 horas">
+                          24h: ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(1)}%
+                        </span>
+                      ` : ''}
+                    `}
                   </div>
                 </div>
               </div>
@@ -345,7 +377,10 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
     console.log(`🔄 Buscando tickers para exchange ${exchangeId}...`);
     
     const tokenEntries = Object.entries(tokens);
-    const tokensWithValue = tokenEntries.filter(([_, t]) => t.value_usd > 0);
+    // Filtra tokens com valor E que não sejam moedas fiduciárias/stablecoins
+    const tokensWithValue = tokenEntries.filter(([symbol, t]) => 
+      t.value_usd > 0 && !isFiatOrStablecoin(symbol)
+    );
     
     // Registra total de tokens a carregar
     if (!appState.tickersLoading.exchanges[exchangeId]) {
@@ -355,6 +390,8 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
       };
       appState.tickersLoading.total += tokensWithValue.length;
     }
+    
+    console.log(`📊 Exchange ${exchangeId}: ${tokensWithValue.length} tokens para buscar ticker (excluindo fiat/stablecoins)`);
     
     // Busca tickers em paralelo (máximo 5 por vez para não sobrecarregar)
     const batchSize = 5;
@@ -449,41 +486,57 @@ async function fetchTokenTicker(exchangeId, symbol, rowElement) {
 function updateTokenRowWithTicker(rowElement, tokenInfo) {
   console.log('📝 Atualizando tokenData com:', tokenInfo);
   
-  // Extrai variações de preço
-  const change1h = tokenInfo.change?.['1h']?.price_change_percent;
-  const change4h = tokenInfo.change?.['4h']?.price_change_percent;
-  const change24h = tokenInfo.change?.['24h']?.price_change_percent;
+  // Pega o símbolo do token
+  const symbol = rowElement.getAttribute('data-token-symbol');
+  
+  // Verifica se é moeda fiduciária ou stablecoin
+  const currencyInfo = getCurrencyType(symbol);
+  const isFiatStable = currencyInfo !== null;
   
   // Atualiza as badges de variação inline na lista
   const variationsContainer = rowElement.querySelector('.ticker-variations');
   if (variationsContainer) {
-    let variationsHTML = '';
-    
-    if (change1h !== undefined && change1h !== null) {
-      variationsHTML += `
-        <span class="text-[10px] px-1 py-0.5 rounded ${change1h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="1 hora">
-          1h: ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(1)}%
+    // Se for fiat/stablecoin, mostra badge especial
+    if (isFiatStable) {
+      variationsContainer.innerHTML = `
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30" title="${currencyInfo.description}">
+          ${currencyInfo.label}
         </span>
       `;
+    } else {
+      // Se for token normal, mostra variações de preço
+      const change1h = tokenInfo.change?.['1h']?.price_change_percent;
+      const change4h = tokenInfo.change?.['4h']?.price_change_percent;
+      const change24h = tokenInfo.change?.['24h']?.price_change_percent;
+      
+      let variationsHTML = '';
+      
+      if (change1h !== undefined && change1h !== null) {
+        variationsHTML += `
+          <span class="text-[10px] px-1 py-0.5 rounded ${change1h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="1 hora">
+            1h: ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(1)}%
+          </span>
+        `;
+      }
+      
+      if (change4h !== undefined && change4h !== null) {
+        variationsHTML += `
+          <span class="text-[10px] px-1 py-0.5 rounded ${change4h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="4 horas">
+            4h: ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(1)}%
+          </span>
+        `;
+      }
+      
+      if (change24h !== undefined && change24h !== null) {
+        variationsHTML += `
+          <span class="text-[10px] px-1 py-0.5 rounded ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="24 horas">
+            24h: ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(1)}%
+          </span>
+        `;
+      }
+      
+      variationsContainer.innerHTML = variationsHTML;
     }
-    
-    if (change4h !== undefined && change4h !== null) {
-      variationsHTML += `
-        <span class="text-[10px] px-1 py-0.5 rounded ${change4h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="4 horas">
-          4h: ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(1)}%
-        </span>
-      `;
-    }
-    
-    if (change24h !== undefined && change24h !== null) {
-      variationsHTML += `
-        <span class="text-[10px] px-1 py-0.5 rounded ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="24 horas">
-          24h: ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(1)}%
-        </span>
-      `;
-    }
-    
-    variationsContainer.innerHTML = variationsHTML;
   }
   
   // Atualiza o data attribute com informações completas
@@ -515,6 +568,10 @@ function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
   // Log para debug
   console.log('Token Data no Modal:', tokenData);
   
+  // Verifica se é moeda fiduciária ou stablecoin
+  const currencyInfo = getCurrencyType(symbol);
+  const isFiatStable = currencyInfo !== null;
+  
   // Verifica se tem dados do ticker da API
   const ticker = tokenData.ticker;
   const hasTicker = ticker && ticker.symbol;
@@ -544,7 +601,7 @@ function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
         <div class="relative p-4 border-b border-primary-500/30 bg-gradient-to-r from-primary-900/20 via-dark-800 to-dark-900">
           <div class="flex-1 text-center">
             <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-500/30 mb-2 animate-pulse-slow">
-              <span class="text-2xl">💎</span>
+              <span class="text-2xl">${isFiatStable ? (currencyInfo.type === 'fiat' ? '💵' : '🔒') : '💎'}</span>
             </div>
             <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-600">${symbol}</h2>
             <p class="text-xs text-dark-400 mt-0.5">${exchangeName}</p>
@@ -582,7 +639,20 @@ function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
             </div>
           </div>
           
-          ${hasTicker && (change1h !== undefined || change4h !== undefined || change24h !== undefined) && (change1h !== 0 || change4h !== 0 || change24h !== 0) ? `
+          ${isFiatStable ? `
+          <!-- Alerta: Moeda Fiduciária / Stablecoin -->
+          <div class="p-3 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/30">
+            <div class="flex items-center space-x-2">
+              <span class="text-2xl">${currencyInfo.type === 'fiat' ? '💵' : '🔒'}</span>
+              <div class="flex-1">
+                <p class="text-sm font-semibold text-blue-400">${currencyInfo.label}</p>
+                <p class="text-xs text-blue-300/70 mt-0.5">${currencyInfo.description}</p>
+              </div>
+            </div>
+          </div>
+          ` : ''}
+          
+          ${!isFiatStable && hasTicker && (change1h !== undefined || change4h !== undefined || change24h !== undefined) && (change1h !== 0 || change4h !== 0 || change24h !== 0) ? `
           <!-- Linha 2: Variações Compactas -->
           <div class="p-3 bg-gradient-to-br from-dark-700/30 to-dark-800/30 rounded-xl border border-dark-600/50">
             <div class="flex items-center space-x-1.5 mb-2">
