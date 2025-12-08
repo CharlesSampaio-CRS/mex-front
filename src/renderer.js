@@ -909,14 +909,23 @@ function updateDashboardBalances(balances) {
   const totalEl = document.getElementById('dashboard-total');
   if (totalEl) totalEl.textContent = formatCurrency(totalUSD);
   
-  // Calcula totais de BRL, USDT e USDC somando todas as exchanges
+  // Calcula totais de BRL, USDT, USDC e conta tokens (excluindo BRL, USDT, USDC)
   let totalBRL = 0;
   let totalUSDT = 0;
   let totalUSDC = 0;
+  let totalTokens = 0;
+  const EXCLUDED_CURRENCIES = ['BRL', 'USDT', 'USDC'];
   
   if (balances.exchanges && Array.isArray(balances.exchanges)) {
     balances.exchanges.forEach(exchange => {
       if (exchange.tokens) {
+        // Conta tokens (excluindo moedas fiduciárias/stablecoins)
+        Object.keys(exchange.tokens).forEach(symbol => {
+          if (!EXCLUDED_CURRENCIES.includes(symbol.toUpperCase()) && exchange.tokens[symbol].amount > 0) {
+            totalTokens++;
+          }
+        });
+        
         // Soma BRL
         if (exchange.tokens.BRL) {
           totalBRL += exchange.tokens.BRL.amount || 0;
@@ -931,6 +940,12 @@ function updateDashboardBalances(balances) {
         }
       }
     });
+  }
+  
+  // Atualiza card de tokens
+  const tokensEl = document.getElementById('dashboard-tokens');
+  if (tokensEl) {
+    tokensEl.textContent = totalTokens.toString();
   }
   
   // Atualiza cards individuais
@@ -955,7 +970,7 @@ function updateDashboardBalances(balances) {
       : '0.00';
   }
   
-  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC });
+  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC, totalTokens });
 }
 
 // ==================== EXCHANGES ====================
