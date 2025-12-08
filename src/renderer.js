@@ -962,12 +962,13 @@ function updateDashboardBalances(balances) {
   console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC, showBRL });
   
   // Reordena cards por valor (maior para menor, da esquerda para direita)
-  // Considera valores convertidos se BRL estiver ativo
+  // Normaliza todos os valores para USD para comparação justa
+  const brlToUSD = totalBRL / brlMultiplier; // Converte BRL para USD
   const valuesToCompare = {
-    totalUSD,
-    totalBRL,
-    totalUSDT: showBRL ? totalUSDT * brlMultiplier : totalUSDT,
-    totalUSDC: showBRL ? totalUSDC * brlMultiplier : totalUSDC
+    totalUSD,           // Total já está em USD
+    totalBRL: brlToUSD, // BRL convertido para USD
+    totalUSDT,          // USDT já está em USD
+    totalUSDC           // USDC já está em USD
   };
   reorderCardsByValue(valuesToCompare);
 }
