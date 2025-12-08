@@ -927,7 +927,11 @@ function updateDashboardBalances(balances) {
     });
   }
   
-  // Atualiza cards individuais
+  // Atualiza cards individuais com conversão BRL
+  const showBRL = appState.showBRL;
+  const brlMultiplier = 5.07; // Taxa de conversão USD para BRL
+  
+  // Card BRL - sempre em BRL
   const brlEl = document.getElementById('dashboard-brl');
   if (brlEl) {
     brlEl.textContent = totalBRL > 0 
@@ -935,24 +939,37 @@ function updateDashboardBalances(balances) {
       : 'R$ 0,00';
   }
   
+  // Card USDT - converte se toggle ativo
   const usdtEl = document.getElementById('dashboard-usdt');
   if (usdtEl) {
-    usdtEl.textContent = totalUSDT > 0 
-      ? formatNumber(totalUSDT) 
-      : '0.00';
+    if (showBRL && totalUSDT > 0) {
+      usdtEl.textContent = `R$ ${formatNumber(totalUSDT * brlMultiplier)}`;
+    } else {
+      usdtEl.textContent = totalUSDT > 0 ? `$ ${formatNumber(totalUSDT)}` : '$0.00';
+    }
   }
   
+  // Card USDC - converte se toggle ativo
   const usdcEl = document.getElementById('dashboard-usdc');
   if (usdcEl) {
-    usdcEl.textContent = totalUSDC > 0 
-      ? formatNumber(totalUSDC) 
-      : '0.00';
+    if (showBRL && totalUSDC > 0) {
+      usdcEl.textContent = `R$ ${formatNumber(totalUSDC * brlMultiplier)}`;
+    } else {
+      usdcEl.textContent = totalUSDC > 0 ? `$ ${formatNumber(totalUSDC)}` : '$0.00';
+    }
   }
   
-  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC });
+  console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC, showBRL });
   
   // Reordena cards por valor (maior para menor, da esquerda para direita)
-  reorderCardsByValue({ totalUSD, totalBRL, totalUSDT, totalUSDC });
+  // Considera valores convertidos se BRL estiver ativo
+  const valuesToCompare = {
+    totalUSD,
+    totalBRL,
+    totalUSDT: showBRL ? totalUSDT * brlMultiplier : totalUSDT,
+    totalUSDC: showBRL ? totalUSDC * brlMultiplier : totalUSDC
+  };
+  reorderCardsByValue(valuesToCompare);
 }
 
 // Função para reordenar cards por valor
