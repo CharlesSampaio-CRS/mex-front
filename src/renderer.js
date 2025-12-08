@@ -1620,12 +1620,14 @@ async function switchView(viewName) {
   // Esconde todas as views
   document.querySelectorAll('.view').forEach(view => {
     view.classList.add('hidden');
+    view.style.display = 'none'; // Garante que está escondida
   });
   
   // Mostra a view selecionada
   const targetView = document.getElementById(`${viewName}-view`);
   if (targetView) {
     targetView.classList.remove('hidden');
+    targetView.style.display = ''; // Remove o display inline para permitir CSS funcionar
   }
   
   // Atualiza botões de navegação
@@ -1652,12 +1654,14 @@ function switchViewOnly(viewName) {
   // Esconde todas as views
   document.querySelectorAll('.view').forEach(view => {
     view.classList.add('hidden');
+    view.style.display = 'none'; // Garante que está escondida
   });
   
   // Mostra a view selecionada
   const targetView = document.getElementById(`${viewName}-view`);
   if (targetView) {
     targetView.classList.remove('hidden');
+    targetView.style.display = ''; // Remove o display inline para permitir CSS funcionar
   }
   
   // Atualiza botões de navegação
