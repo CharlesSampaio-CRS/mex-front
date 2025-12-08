@@ -143,8 +143,15 @@ async function loadDashboardData() {
 
 function renderTokensList(tokens, exchangeId, exchangeName) {
   const tokenEntries = Object.entries(tokens);
-  const tokensWithValue = tokenEntries.filter(([_, t]) => t.value_usd > 0);
-  const tokensWithoutValue = tokenEntries.filter(([_, t]) => t.value_usd === 0);
+  
+  // Filtra moedas fiduciárias e stablecoins específicas (BRL, USDT, USDC)
+  const EXCLUDED_CURRENCIES = ['BRL', 'USDT', 'USDC'];
+  const filteredTokens = tokenEntries.filter(([symbol, _]) => 
+    !EXCLUDED_CURRENCIES.includes(symbol.toUpperCase())
+  );
+  
+  const tokensWithValue = filteredTokens.filter(([_, t]) => t.value_usd > 0);
+  const tokensWithoutValue = filteredTokens.filter(([_, t]) => t.value_usd === 0);
   
   // Ordena tokens com valor por valor (maior primeiro)
   const sortedTokensWithValue = tokensWithValue.sort((a, b) => b[1].value_usd - a[1].value_usd);
