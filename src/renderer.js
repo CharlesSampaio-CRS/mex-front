@@ -950,6 +950,40 @@ function updateDashboardBalances(balances) {
   }
   
   console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC });
+  
+  // Reordena cards por valor (maior para menor, da esquerda para direita)
+  reorderCardsByValue({ totalUSD, totalBRL, totalUSDT, totalUSDC });
+}
+
+// Função para reordenar cards por valor
+function reorderCardsByValue(values) {
+  const container = document.querySelector('#dashboard-view > div.mb-6');
+  if (!container) return;
+  
+  // Cria array com informações dos cards
+  const cards = [
+    { id: 'total', value: values.totalUSD, element: null },
+    { id: 'brl', value: values.totalBRL, element: null },
+    { id: 'usdt', value: values.totalUSDT, element: null },
+    { id: 'usdc', value: values.totalUSDC, element: null }
+  ];
+  
+  // Pega os elementos dos cards
+  const allCards = Array.from(container.children);
+  cards[0].element = allCards.find(el => el.querySelector('#dashboard-total'));
+  cards[1].element = allCards.find(el => el.querySelector('#dashboard-brl'));
+  cards[2].element = allCards.find(el => el.querySelector('#dashboard-usdt'));
+  cards[3].element = allCards.find(el => el.querySelector('#dashboard-usdc'));
+  
+  // Ordena por valor (maior primeiro)
+  cards.sort((a, b) => b.value - a.value);
+  
+  // Reordena os elementos no DOM
+  cards.forEach(card => {
+    if (card.element) {
+      container.appendChild(card.element);
+    }
+  });
 }
 
 // ==================== EXCHANGES ====================
