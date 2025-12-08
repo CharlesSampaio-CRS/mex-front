@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:5000; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net">
+  <title>MeX</title>
+  <link rel="stylesheet" href="./styles/output.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="overflow-hidden">
+  
+  <!-- Loading Screen Overlay - Bloqueia toda interação -->
+  <div id="loading-screen" class="fixed inset-0 bg-dark-900/95 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center">
+    <div class="text-center">
+      <!-- Spinner Principal de Loading -->
+      <div class="mb-6 relative">
+        <!-- Círculo externo pulsante -->
+        <div class="w-32 h-32 mx-auto rounded-full border-4 border-primary-500/20" 
+             style="animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
+        
+        <!-- Spinner principal girando suavemente -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-24 h-24 rounded-full border-4 border-transparent border-t-primary-500 border-r-primary-400" 
+               style="animation: spin-smooth 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+        </div>
+        
+        <!-- Spinner do meio -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-18 h-18 rounded-full border-3 border-transparent border-r-primary-500 border-b-primary-400" 
+               style="animation: spin-smooth 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+        </div>
+        
+        <!-- Spinner interno menor -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-12 h-12 rounded-full border-3 border-transparent border-b-primary-600 border-l-primary-500" 
+               style="animation: spin-smooth 2s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse;"></div>
+        </div>
+        
+        <!-- Spinner mais interno -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-full border-2 border-transparent border-t-primary-600 border-r-primary-700" 
+               style="animation: spin-smooth 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+        </div>
+        
+        <!-- Centro com ponto brilhante -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-3 h-3 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 shadow-lg shadow-primary-500/50"
+               style="animation: pulse-ring 1s ease-in-out infinite;"></div>
+        </div>
+      </div>
+      
+      <!-- Título -->
+      <h1 class="text-3xl font-bold mb-6">
+        <span class="logo-me">Me</span><span class="logo-x">X</span>
+      </h1>
+      
+      <!-- Mensagem dinâmica -->
+      <p id="loading-message" class="text-dark-400 text-sm animate-pulse">Carregando informações...</p>
+      
+      <!-- Barra de progresso -->
+      <div class="w-64 bg-dark-700 rounded-full h-2 mt-4">
+        <div id="loading-progress" class="bg-primary-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Container principal - Desabilitado durante loading -->
+  <div id="app" class="h-screen flex flex-col pointer-events-none opacity-50">
+    
+    <!-- Header / Barra de navegação -->
+    <header class="bg-dark-800 border-b border-dark-700 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <h2 class="text-2xl font-bold cursor-pointer hover:opacity-80 transition-opacity" id="logo-header" title="Ir para Dashboard">
+            <span class="logo-me">Me</span><span class="logo-x">X</span>
+          </h2>
+        </div>
+        
+        <nav class="flex items-center space-x-2">
+          <button class="btn-secondary" data-view="dashboard" title="Home">
+            🏠
+          </button>
+          <button class="btn-secondary" data-view="exchanges" title="Exchanges">
+            🔗
+          </button>
+          <button class="btn-secondary" data-view="history" title="Histórico">
+            📈
+          </button>
+          <button class="btn-secondary" data-view="settings" title="Configurações">
+            ⚙️
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Área de conteúdo principal -->
+    <main class="flex-1 overflow-auto scrollbar-thin p-6">
+      
+      <!-- Dashboard View -->
+      <div id="dashboard-view" class="view">
+        <!-- Card: Balance Total Portfolio -->
+        <div class="mb-6">
+          <div class="card hover:border-primary-500/50 transition-all cursor-pointer animate-fade-in max-w-md">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-dark-100">Total</h3>
+            </div>
+            <p class="text-5xl font-bold text-green-400" id="dashboard-total">$0.00</p>
+          </div>
+        </div>
+
+        <!-- Lista de exchanges conectadas -->
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-dark-100">Exchanges</h2>
+            <div class="flex items-center space-x-4">
+              <!-- Toggle Switch estilo iPhone -->
+              <div class="flex items-center space-x-2">
+                <span class="text-sm text-dark-400">Ocultar Zeradas</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="toggle-zero-dashboard-checkbox" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+              <button class="btn-primary text-sm" data-view="exchanges">
+                + Exchange
+              </button>
+            </div>
+          </div>
+          <div id="dashboard-exchanges-list" class="space-y-3">
+            <p class="text-dark-400 text-center py-8">Carregando exchanges...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exchanges View (oculta inicialmente) -->
+      <div id="exchanges-view" class="view hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Card: Conectar Exchange -->
+          <div class="card">
+            <h2 class="text-xl font-bold mb-4 text-dark-100">Conectar</h2>
+            
+            <form id="add-exchange-form" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-dark-300 mb-2">
+                  Selecione a Exchange
+                </label>
+                <select id="exchange-select" class="input" required>
+                  <option value="">Carregando exchanges...</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-dark-300 mb-2">
+                  API Key
+                </label>
+                <input type="text" id="api-key-input" class="input" placeholder="Sua API Key" required>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-dark-300 mb-2">
+                  API Secret
+                </label>
+                <input type="password" id="api-secret-input" class="input" placeholder="Sua API Secret" required>
+              </div>
+
+              <div class="bg-dark-700/50 p-4 rounded-lg">
+                <p class="text-xs text-dark-400">
+                  ⚠️ Suas credenciais são armazenadas de forma criptografada e segura. 
+                  Apenas permissões de leitura são necessárias.
+                </p>
+              </div>
+
+              <button type="submit" class="btn-primary w-full">
+                Salvar
+              </button>
+            </form>
+          </div>
+
+          <!-- Card: Exchanges Disponíveis -->
+          <div class="card">
+            <h2 class="text-xl font-bold mb-4 text-dark-100">Disponíveis</h2>
+            <div id="available-exchanges-list" class="space-y-3 max-h-[500px] overflow-y-auto scrollbar-thin">
+              <p class="text-dark-400 text-center py-8">Carregando...</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Card: Exchanges Conectadas -->
+        <div class="card mt-6">
+          <h2 class="text-xl font-bold mb-4 text-dark-100">Conectadas</h2>
+          <div id="linked-exchanges-list" class="space-y-3">
+            <p class="text-dark-400 text-center py-8">Carregando...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Balances View (oculta inicialmente) -->
+      <div id="balances-view" class="view hidden">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-dark-100">💰 Saldos Detalhados</h2>
+          <div class="flex space-x-2">
+            <button id="toggle-zero-balances-btn" class="btn-secondary text-sm">
+              👁️ Ocultar $0
+            </button>
+            <button id="refresh-balances-btn" class="btn-secondary">
+              🔄 Atualizar
+            </button>
+            <button id="clear-cache-btn" class="btn-secondary">
+              🗑️ Limpar Cache
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-2">Total Portfólio</h3>
+            <p class="text-3xl font-bold text-green-400" id="balances-total">$0.00</p>
+          </div>
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-2">Total Tokens</h3>
+            <p class="text-3xl font-bold text-yellow-400" id="balances-total-tokens">0</p>
+            <p class="text-xs text-dark-400 mt-1" id="balances-tokens-with-value">0 com valor</p>
+          </div>
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-2">Última Atualização</h3>
+            <p class="text-lg font-semibold text-dark-200" id="balances-timestamp">-</p>
+            <p class="text-xs text-dark-400 mt-1" id="balances-cache-status">-</p>
+          </div>
+        </div>
+
+        <!-- Exchanges Balances -->
+        <div id="balances-exchanges-container" class="space-y-4">
+          <p class="text-dark-400 text-center py-8">Carregando saldos...</p>
+        </div>
+      </div>
+
+      <!-- History View (oculta inicialmente) -->
+      <div id="history-view" class="view hidden" style="min-height: 100%; overflow-y: auto; display: none;">
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold text-dark-100">📈 Histórico e Evolução</h2>
+            <button id="refresh-history-btn" class="btn-secondary text-sm">
+              🔄 Atualizar
+            </button>
+          </div>
+          
+          <!-- Period Selector & Toggles -->
+          <div class="flex items-center justify-between">
+            <div class="flex space-x-2">
+              <button class="btn-secondary period-btn" data-period="24h">24 Horas</button>
+              <button class="btn-primary period-btn" data-period="7d">7 Dias</button>
+              <button class="btn-secondary period-btn" data-period="30d">30 Dias</button>
+              <button class="btn-secondary period-btn" data-period="90d">90 Dias</button>
+              <button class="btn-secondary period-btn" data-period="1y">1 Ano</button>
+            </div>
+            
+            <!-- Toggle Options -->
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-2">
+                <span class="text-sm text-dark-400">Grid</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="toggle-grid" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+              
+              <div class="flex items-center space-x-2">
+                <span class="text-sm text-dark-400">Pontos</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="toggle-points" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+              
+              <div class="flex items-center space-x-2">
+                <span class="text-sm text-dark-400">Área</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="toggle-area" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evolution Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-1">Valor Inicial</h3>
+            <p class="text-2xl font-bold text-dark-200" id="history-start-value">$0.00</p>
+          </div>
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-1">Valor Atual</h3>
+            <p class="text-2xl font-bold text-green-400" id="history-end-value">$0.00</p>
+          </div>
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-1">Variação</h3>
+            <p class="text-2xl font-bold" id="history-change-value">$0.00</p>
+          </div>
+          <div class="card">
+            <h3 class="text-sm font-medium text-dark-400 mb-1">Variação %</h3>
+            <p class="text-2xl font-bold" id="history-change-percent">0.00%</p>
+          </div>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="card mb-6" style="min-height: 500px;">
+          <h3 class="text-lg font-bold text-dark-100 mb-4">Evolução do Portfolio</h3>
+          <div style="width: 800px; height: 400px; position: relative; background-color: rgba(59, 130, 246, 0.05); border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 8px; margin: 0 auto;">
+            <canvas id="history-chart-canvas" width="800" height="400" style="display: block; width: 800px !important; height: 400px !important;"></canvas>
+          </div>
+        </div>
+
+        <!-- History Data Points -->
+        <div class="card">
+          <h3 class="text-lg font-bold text-dark-100 mb-4">Pontos de Dados</h3>
+          <div id="history-data-points" class="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin">
+            <p class="text-dark-400 text-center py-8">Carregando histórico...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings View (oculta inicialmente) -->
+      <!-- Settings View (oculta inicialmente) -->
+      <div id="settings-view" class="view hidden" style="min-height: 100%; overflow-y: auto; display: none;">
+        <div class="space-y-4">
+          <!-- Dark Mode -->
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl flex items-center justify-center text-2xl">
+                  🌙
+                </div>
+                <div>
+                  <h3 class="font-semibold text-dark-100">Modo Escuro</h3>
+                  <p class="text-xs text-dark-400">Tema dark/light para o aplicativo</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="dark-mode-toggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Conversão em Reais -->
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center text-2xl">
+                  💵
+                </div>
+                <div>
+                  <h3 class="font-semibold text-dark-100">Conversão em Reais</h3>
+                  <p class="text-xs text-dark-400">Mostrar valores também em BRL (R$)</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="show-brl-toggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Idioma -->
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-700 rounded-xl flex items-center justify-center text-2xl">
+                  🌐
+                </div>
+                <div>
+                  <h3 class="font-semibold text-dark-100">Idioma</h3>
+                  <p class="text-xs text-dark-400">Português ou English</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="language-toggle" class="sr-only peer">
+                <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- User ID -->
+          <div class="card">
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-700 rounded-xl flex items-center justify-center text-2xl">
+                👤
+              </div>
+              <div>
+                <h3 class="font-semibold text-dark-100">User ID</h3>
+                <p class="text-xs text-dark-400">Identificação para a API</p>
+              </div>
+            </div>
+            <input type="text" id="settings-user-id" class="input" value="charles_test_user" placeholder="Digite seu User ID">
+          </div>
+
+          <!-- Informações do App -->
+          <div class="card bg-gradient-to-br from-dark-800/50 to-dark-900/50 border border-dark-700/50">
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-xl flex items-center justify-center text-2xl">
+                ℹ️
+              </div>
+              <div>
+                <h3 class="font-semibold text-dark-100">Informações do App</h3>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-dark-400">Versão:</span>
+                <span class="text-dark-200 font-medium" id="app-version">1.0.0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-dark-400">Plataforma:</span>
+                <span class="text-dark-200 font-medium" id="app-platform">-</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-dark-400">User ID:</span>
+                <span class="text-dark-200 font-medium" id="app-user-id">charles_test_user</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botão Salvar -->
+          <button id="save-settings-btn" class="btn-primary w-full py-4 text-lg font-bold shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transition-all">
+            💾 Salvar Configurações
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer / Status bar -->
+    <footer class="bg-dark-800 border-t border-dark-700 px-6 py-3">
+      <div class="flex items-center justify-between text-sm text-dark-400">
+        <div class="flex items-center space-x-4">
+          <span>Status: <span class="text-green-400">●</span> Online</span>
+          <span>|</span>
+          <span><span id="footer-exchanges-count">0</span> exchanges Conectadas</span>
+          <span>|</span>
+          <button id="btn-manual-refresh" class="text-primary-400 hover:text-primary-300 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-primary-500/10 flex items-center space-x-2 group" title="Clique para atualizar agora">
+            <svg id="refresh-icon" class="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span id="refresh-status" class="font-medium">Cada 2 minutos</span>
+          </button>
+        </div>
+        <div>
+          <span id="footer-info">MeX v1.0.0</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="./services/api.js"></script>
+  <script src="./renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* View System - Garantir que funcione */
+.view {
+  display: block;
+}
+
+.view.hidden {
+  display: none !important;
+}
+
+/* Dark Mode Variables (Default) */
+:root, html.dark-mode {
+  --bg-primary: #0F172A;
+  --bg-secondary: #1E293B;
+  --bg-tertiary: #334155;
+  --bg-card: #1E293B;
+  --bg-card-hover: #334155;
+  
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-tertiary: #94A3B8;
+  
+  --border-color: #334155;
+  --border-hover: #475569;
+  
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-hover: rgba(99, 102, 241, 0.1);
+  
+  --icon-color: #94A3B8;
+  --price-positive: #10B981;
+  --price-negative: #EF4444;
+}
+
+/* Light Mode Variables */
+html.light-mode {
+  --bg-primary: #F1F5F9;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E2E8F0;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  
+  --text-primary: #0F172A;
+  --text-secondary: #1E293B;
+  --text-tertiary: #475569;
+  
+  --border-color: #CBD5E1;
+  --border-hover: #94A3B8;
+  
+  --shadow-color: rgba(0, 0, 0, 0.15);
+  --shadow-hover: rgba(99, 102, 241, 0.1);
+  
+  --icon-color: #475569;
+  --price-positive: #059669;
+  --price-negative: #DC2626;
+}
+
+/* Custom Base Styles */
+@layer base {
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    @apply transition-colors duration-300;
+  }
+  
+  h1 {
+    @apply text-3xl font-bold;
+    color: var(--text-primary);
+  }
+  
+  h2 {
+    @apply text-2xl font-semibold;
+    color: var(--text-primary);
+  }
+  
+  h3 {
+    @apply text-xl font-semibold;
+    color: var(--text-primary);
+  }
+}
+
+/* Logo MeX - Mesmo estilo vibrante em dark e light mode */
+.logo-me {
+  color: #38bdf8 !important;
+  text-shadow: 0 0 20px rgba(14,165,233,0.6), 0 0 40px rgba(14,165,233,0.3);
+}
+
+.logo-x {
+  color: #facc15 !important;
+  text-shadow: 0 0 20px rgba(250,204,21,0.8), 0 0 40px rgba(245,158,11,0.4);
+}
+
+/* Light mode usa as mesmas cores vibrantes */
+html.light-mode .logo-me {
+  color: #38bdf8 !important;
+  text-shadow: 0 0 20px rgba(14,165,233,0.6), 0 0 40px rgba(14,165,233,0.3);
+}
+
+html.light-mode .logo-x {
+  color: #facc15 !important;
+  text-shadow: 0 0 20px rgba(250,204,21,0.8), 0 0 40px rgba(245,158,11,0.4);
+}
+
+/* Custom Components */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:scale-105 active:scale-95;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+  
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white focus:ring-primary-500 shadow-lg shadow-primary-500/20;
+  }
+  
+  .btn-secondary {
+    @apply btn;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+  
+  .card {
+    @apply rounded-xl p-6 shadow-2xl backdrop-blur-sm transition-all duration-300;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px var(--shadow-color);
+  }
+  
+  .card:hover {
+    box-shadow: 0 10px 40px var(--shadow-hover);
+    border-color: var(--border-hover);
+  }
+  
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg transition-all duration-300;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+  
+  .input:focus {
+    @apply outline-none ring-2 ring-primary-500;
+    border-color: #6366F1;
+  }
+  
+  .input::placeholder {
+    color: var(--text-tertiary);
+  }
+  
+  html.light-mode .input::placeholder {
+    color: #64748B;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 hover:scale-105;
+  }
+  
+  .badge-success {
+    @apply badge bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 shadow-sm shadow-green-500/10;
+    color: #4ADE80;
+  }
+  
+  html.light-mode .badge-success {
+    color: #059669;
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+  }
+  
+  .badge-error {
+    @apply badge bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/30 shadow-sm shadow-red-500/10;
+    color: #F87171;
+  }
+  
+  html.light-mode .badge-error {
+    color: #DC2626;
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+  }
+  
+  .badge-warning {
+    @apply badge bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30 shadow-sm shadow-yellow-500/10;
+    color: #FBBF24;
+  }
+  
+  html.light-mode .badge-warning {
+    color: #B45309;
+    background: linear-gradient(to right, rgba(234, 179, 8, 0.15), rgba(202, 138, 4, 0.15));
+  }
+  
+  /* Price Change Badges - Melhorar visibilidade no light mode */
+  html.dark-mode .text-green-400 {
+    color: #4ADE80 !important;
+  }
+  
+  html.light-mode .text-green-400 {
+    color: #059669 !important;
+  }
+  
+  html.dark-mode .text-red-400 {
+    color: #F87171 !important;
+  }
+  
+  html.light-mode .text-red-400 {
+    color: #DC2626 !important;
+  }
+  
+  html.light-mode .bg-green-500\/20 {
+    background: rgba(16, 185, 129, 0.2) !important;
+  }
+  
+  html.light-mode .bg-red-500\/20 {
+    background: rgba(239, 68, 68, 0.2) !important;
+  }
+  
+  html.light-mode .bg-green-500\/10 {
+    background: rgba(16, 185, 129, 0.15) !important;
+  }
+  
+  /* Textos secundários no light mode */
+  html.light-mode .text-dark-300,
+  html.light-mode .text-dark-400,
+  html.light-mode .text-gray-400,
+  html.light-mode .text-gray-500 {
+    color: #475569 !important;
+  }
+  
+  /* Textos primários no light mode */
+  html.light-mode .text-dark-50,
+  html.light-mode .text-dark-100,
+  html.light-mode .text-white {
+    color: var(--text-primary) !important;
+  }
+  
+  /* Textos secundários adicionais */
+  html.light-mode .text-dark-200 {
+    color: #1E293B !important;
+  }
+  
+  /* Classes de texto xs, sm, etc mais visíveis no light mode */
+  html.light-mode .text-xs,
+  html.light-mode .text-sm {
+    opacity: 0.9;
+  }
+  
+  /* Melhorar visibilidade de spans e pequenos textos */
+  html.light-mode span:not(.text-green-400):not(.text-red-400):not(.badge) {
+    color: inherit;
+    font-weight: 500;
+  }
+  
+  /* Backgrounds no light mode */
+  html.light-mode .bg-dark-800,
+  html.light-mode .bg-dark-700 {
+    background: var(--bg-card) !important;
+  }
+  
+  html.light-mode .bg-dark-900 {
+    background: var(--bg-primary) !important;
+  }
+  
+  /* Exchange Card Improvements */
+  .exchange-card {
+    @apply rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+  }
+  
+  .exchange-card:hover {
+    border-color: #6366F1;
+    box-shadow: 0 10px 30px var(--shadow-hover);
+  }
+  
+  .exchange-header {
+    @apply p-4 cursor-pointer transition-all duration-300 backdrop-blur-sm;
+    background: var(--bg-tertiary);
+  }
+  
+  .exchange-header:hover {
+    background: var(--bg-card-hover);
+  }
+  
+  /* Token Row Improvements */
+  .token-row {
+    @apply grid grid-cols-3 gap-2 p-3 rounded-lg cursor-pointer transition-all duration-300 border border-transparent;
+    background: var(--bg-tertiary);
+  }
+  
+  .token-row:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(99, 102, 241, 0.3);
+    @apply shadow-md scale-[1.02];
+  }
+  
+  /* Modal Improvements */
+  .modal-overlay {
+    @apply fixed inset-0 backdrop-blur-sm flex items-center justify-center z-[100] animate-fade-in p-4;
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .modal-content {
+    @apply rounded-xl max-w-2xl w-full max-h-[85vh] overflow-auto shadow-2xl;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+  }
+  
+  /* Toggle Switches - Componente Reutilizável */
+  /* COR PREDOMINANTE: #0ea5e9 (Sky Blue - cor do loading spinner) */
+  
+  /* Toggle Base - Estrutura comum */
+  .toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  
+  .toggle-switch input[type="checkbox"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+  
+  .toggle-track {
+    width: 2.75rem; /* 44px */
+    height: 1.5rem; /* 24px */
+    border-radius: 9999px;
+    position: relative;
+    transition: background-color 0.3s ease;
+  }
+  
+  /* Toggle Track - Estado OFF */
+  .toggle-track {
+    background-color: #475569;
+  }
+  
+  html.light-mode .toggle-track {
+    background-color: #CBD5E1;
+  }
+  
+  /* Toggle Track - Estado ON - SEMPRE AZUL #0ea5e9 */
+  .toggle-switch input:checked ~ .toggle-track.toggle-primary,
+  .toggle-switch input:checked ~ .toggle-track.toggle-green,
+  .toggle-switch input:checked ~ .toggle-track.toggle-blue,
+  .toggle-switch input:checked ~ .toggle-track {
+    background-color: #0ea5e9 !important; /* Sky Blue - cor do loading */
+  }
+  
+  html.light-mode .toggle-switch input:checked ~ .toggle-track.toggle-primary,
+  html.light-mode .toggle-switch input:checked ~ .toggle-track.toggle-green,
+  html.light-mode .toggle-switch input:checked ~ .toggle-track.toggle-blue,
+  html.light-mode .toggle-switch input:checked ~ .toggle-track {
+    background-color: #0ea5e9 !important; /* Mesma cor no light mode */
+  }
+  
+  /* Toggle Slider (botão branco) */
+  .toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1.25rem; /* 20px */
+    height: 1.25rem; /* 20px */
+    background-color: #FFFFFF;
+    border-radius: 9999px;
+    border: 1px solid #D1D5DB;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  html.light-mode .toggle-slider {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .toggle-switch input:checked ~ .toggle-track .toggle-slider {
+    transform: translateX(1.25rem); /* 20px */
+  }
+  
+  /* Focus Ring - usando o azul predominante */
+  .toggle-switch input:focus ~ .toggle-track {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.5); /* #0ea5e9 com opacidade */
+  }
+  
+  /* Compatibilidade com classes antigas - TODAS USAM AZUL #0ea5e9 */
+  html.light-mode .bg-dark-600 {
+    background-color: #CBD5E1 !important;
+  }
+  
+  html.light-mode .peer:checked ~ .peer-checked\:bg-primary-600,
+  html.light-mode input:checked ~ .peer-checked\:bg-primary-600,
+  html.light-mode .peer:checked ~ .peer-checked\:bg-green-600,
+  html.light-mode input:checked ~ .peer-checked\:bg-green-600,
+  html.light-mode .peer:checked ~ .peer-checked\:bg-blue-600,
+  html.light-mode input:checked ~ .peer-checked\:bg-blue-600 {
+    background-color: #0ea5e9 !important; /* Todas toggles com azul predominante */
+  }
+  
+  /* Dark mode - também usa o azul predominante */
+  .peer:checked ~ .peer-checked\:bg-primary-600,
+  .peer:checked ~ .peer-checked\:bg-green-600,
+  .peer:checked ~ .peer-checked\:bg-blue-600 {
+    background-color: #0ea5e9 !important;
+  }
+  
+  html.light-mode .text-dark-800 {
+    color: #1E293B !important;
+  }
+}
+
+/* Custom Utilities & Animations */
+@layer utilities {
+  .glass {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+  }
+  
+  /* Smooth Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .animate-fade-out {
+    animation: fadeOut 0.2s ease-out forwards;
+  }
+  
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  
+  @keyframes slideDown {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  /* Custom Scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 9999px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-primary-600 to-primary-700 rounded-full hover:from-primary-500 hover:to-primary-600;
+  }
+  
+  /* Shimmer Effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  
+  /* Spin Animation for Refresh Button */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Smooth Spin Animation for Loading Screen */
+  @keyframes spin-smooth {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes spin-smooth-reverse {
+    0% {
+      transform: rotate(360deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+  
+  /* Hourglass Flip Animation */
+  @keyframes hourglass-flip {
+    0%, 100% {
+      transform: rotate(0deg) scale(1);
+    }
+    50% {
+      transform: rotate(180deg) scale(1.1);
+    }
+  }
+  
+  /* Pulse Ring Animation */
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.95);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(0.95);
+      opacity: 1;
+    }
+  }
+}
