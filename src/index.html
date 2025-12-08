@@ -100,40 +100,41 @@
       <!-- Dashboard View -->
       <div id="dashboard-view" class="view">
         <!-- Cards: Balance Total + Moedas Fiduciárias -->
-        <div class="mb-6 grid grid-cols-4 gap-4">
+        <div class="mb-6 grid grid-cols-4 gap-3">
           <!-- Card: Total Portfolio -->
-          <div class="card hover:border-primary-500/50 transition-all cursor-pointer animate-fade-in">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-dark-100">💰 Total</h3>
+          <div class="p-3 bg-dark-800 border border-primary-500/30 rounded-lg hover:border-primary-500/50 transition-all cursor-pointer animate-fade-in">
+            <div class="flex items-center justify-center mb-1">
+              <span class="text-2xl">💰</span>
             </div>
-            <p class="text-3xl font-bold text-green-400" id="dashboard-total">$0.00</p>
+            <p class="text-xs text-dark-400 text-center mb-1">Total</p>
+            <p class="text-xl font-bold text-green-400 text-center" id="dashboard-total">$0.00</p>
           </div>
           
           <!-- Card: BRL -->
-          <div class="card hover:border-blue-500/50 transition-all animate-fade-in bg-gradient-to-br from-blue-900/10 to-transparent border-blue-500/20">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-blue-300">💵 BRL</h3>
+          <div class="p-3 bg-dark-800 border border-blue-500/30 rounded-lg hover:border-blue-500/50 transition-all animate-fade-in bg-gradient-to-br from-blue-900/10 to-transparent">
+            <div class="flex items-center justify-center mb-1">
+              <span class="text-2xl">💵</span>
             </div>
-            <p class="text-3xl font-bold text-blue-400" id="dashboard-brl">R$ 0,00</p>
-            <p class="text-xs text-dark-500 mt-1">Moeda Fiduciária</p>
+            <p class="text-xs text-blue-400 text-center mb-1">BRL</p>
+            <p class="text-xl font-bold text-blue-400 text-center" id="dashboard-brl">R$ 0,00</p>
           </div>
           
           <!-- Card: USDT -->
-          <div class="card hover:border-emerald-500/50 transition-all animate-fade-in bg-gradient-to-br from-emerald-900/10 to-transparent border-emerald-500/20">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-emerald-300">🔒 USDT</h3>
+          <div class="p-3 bg-dark-800 border border-emerald-500/30 rounded-lg hover:border-emerald-500/50 transition-all animate-fade-in bg-gradient-to-br from-emerald-900/10 to-transparent">
+            <div class="flex items-center justify-center mb-1">
+              <span class="text-2xl">🔒</span>
             </div>
-            <p class="text-3xl font-bold text-emerald-400" id="dashboard-usdt">0.00</p>
-            <p class="text-xs text-dark-500 mt-1">Stablecoin</p>
+            <p class="text-xs text-emerald-400 text-center mb-1">USDT</p>
+            <p class="text-xl font-bold text-emerald-400 text-center" id="dashboard-usdt">0.00</p>
           </div>
           
           <!-- Card: USDC -->
-          <div class="card hover:border-cyan-500/50 transition-all animate-fade-in bg-gradient-to-br from-cyan-900/10 to-transparent border-cyan-500/20">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-cyan-300">🔒 USDC</h3>
+          <div class="p-3 bg-dark-800 border border-cyan-500/30 rounded-lg hover:border-cyan-500/50 transition-all animate-fade-in bg-gradient-to-br from-cyan-900/10 to-transparent">
+            <div class="flex items-center justify-center mb-1">
+              <span class="text-2xl">🔒</span>
             </div>
-            <p class="text-3xl font-bold text-cyan-400" id="dashboard-usdc">0.00</p>
-            <p class="text-xs text-dark-500 mt-1">Stablecoin</p>
+            <p class="text-xs text-cyan-400 text-center mb-1">USDC</p>
+            <p class="text-xl font-bold text-cyan-400 text-center" id="dashboard-usdc">0.00</p>
           </div>
         </div>
 
