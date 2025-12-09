@@ -39,10 +39,16 @@ const translations = {
     history: 'Histórico',
     settings: 'Configurações',
     loading: 'Carregando informações...',
-    home: 'Home',
+    home: 'Início',
     
-    // Cards
+    // Cards Dashboard
     totalPortfolio: 'Total',
+    
+    // Títulos de Seção
+    connectedExchanges: 'Corretoras Conectadas',
+    availableExchanges: 'Corretoras Disponíveis',
+    tokenList: 'Lista de Tokens',
+    priceHistory: 'Histórico de Preços',
     
     // Botões
     refresh: 'Atualizar',
@@ -52,6 +58,19 @@ const translations = {
     remove: 'Remover',
     edit: 'Editar',
     delete: 'Excluir',
+    connect: 'Conectar',
+    disconnect: 'Desconectar',
+    details: 'Detalhes',
+    
+    // Labels
+    balance: 'Saldo',
+    value: 'Valor',
+    amount: 'Quantidade',
+    price: 'Preço',
+    change24h: 'Variação 24h',
+    symbol: 'Símbolo',
+    name: 'Nome',
+    hideZero: 'Ocultar Zeradas',
     
     // Settings
     darkMode: 'Modo Escuro',
@@ -60,12 +79,22 @@ const translations = {
     brlConversionDesc: 'Mostrar valores também em BRL (R$)',
     language: 'Idioma',
     languageDesc: 'Português ou English',
+    userId: 'ID do Usuário',
+    userIdDesc: 'Identificador único para suas configurações',
     
     // Moedas
     fiatCurrency: '💵 Moeda Fiduciária',
     stablecoin: '🔒 Stablecoin',
     fiatDesc: 'Não possui variação de mercado',
-    stablecoinDesc: 'Atrelada a moeda fiduciária'
+    stablecoinDesc: 'Atrelada a moeda fiduciária',
+    
+    // Mensagens
+    noData: 'Nenhum dado disponível',
+    noExchanges: 'Nenhuma exchange conectada',
+    noTokens: 'Nenhum token encontrado',
+    loadingData: 'Carregando dados...',
+    error: 'Erro',
+    success: 'Sucesso'
   },
   en: {
     // Dashboard
@@ -77,8 +106,14 @@ const translations = {
     loading: 'Loading information...',
     home: 'Home',
     
-    // Cards
+    // Cards Dashboard
     totalPortfolio: 'Total',
+    
+    // Títulos de Seção
+    connectedExchanges: 'Connected Exchanges',
+    availableExchanges: 'Available Exchanges',
+    tokenList: 'Token List',
+    priceHistory: 'Price History',
     
     // Botões
     refresh: 'Refresh',
@@ -88,6 +123,19 @@ const translations = {
     remove: 'Remove',
     edit: 'Edit',
     delete: 'Delete',
+    connect: 'Connect',
+    disconnect: 'Disconnect',
+    details: 'Details',
+    
+    // Labels
+    balance: 'Balance',
+    value: 'Value',
+    amount: 'Amount',
+    price: 'Price',
+    change24h: '24h Change',
+    symbol: 'Symbol',
+    name: 'Name',
+    hideZero: 'Hide Zero',
     
     // Settings
     darkMode: 'Dark Mode',
@@ -96,12 +144,22 @@ const translations = {
     brlConversionDesc: 'Show values in BRL (R$)',
     language: 'Language',
     languageDesc: 'Portuguese or English',
+    userId: 'User ID',
+    userIdDesc: 'Unique identifier for your settings',
     
     // Moedas
     fiatCurrency: '💵 Fiat Currency',
     stablecoin: '🔒 Stablecoin',
     fiatDesc: 'No market variation',
-    stablecoinDesc: 'Pegged to fiat currency'
+    stablecoinDesc: 'Pegged to fiat currency',
+    
+    // Mensagens
+    noData: 'No data available',
+    noExchanges: 'No exchanges connected',
+    noTokens: 'No tokens found',
+    loadingData: 'Loading data...',
+    error: 'Error',
+    success: 'Success'
   }
 };
 
@@ -1797,7 +1855,9 @@ function updateLanguageLabel(lang) {
 
 // Função para atualizar todos os textos da interface
 function updateInterfaceLanguage() {
-  // Atualiza tooltips da navegação
+  console.log('🔄 Atualizando interface para idioma:', appState.language);
+  
+  // 1. Atualiza tooltips da navegação
   const navButtons = [
     { selector: 'button[data-view="dashboard"]', key: 'home' },
     { selector: 'button[data-view="exchanges"]', key: 'exchanges' },
@@ -1810,16 +1870,40 @@ function updateInterfaceLanguage() {
     if (el) el.title = t(item.key);
   });
   
-  // Atualiza mensagem de loading
+  // 2. Atualiza mensagem de loading
   const loadingMsg = document.getElementById('loading-message');
   if (loadingMsg) loadingMsg.textContent = t('loading');
   
-  // Atualiza Settings
+  // 3. Atualiza todos os elementos com data-i18n
+  const i18nElements = document.querySelectorAll('[data-i18n]');
+  i18nElements.forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key && translations[appState.language][key]) {
+      el.textContent = t(key);
+    }
+  });
+  
+  // 4. Atualiza textos específicos do Settings
   updateSettingsLanguage();
   
-  // Se estiver na view de tokens, recarrega a lista para atualizar badges
-  if (appState.currentView === 'tokens') {
+  // 5. Atualiza a view atual para refletir as mudanças
+  if (appState.currentView === 'tokens' && appState.balances) {
     renderTokensList(appState.balances);
+  }
+  
+  if (appState.currentView === 'dashboard' && appState.balances) {
+    // Recarrega os badges de moedas se necessário
+    const badges = document.querySelectorAll('.currency-type-badge');
+    badges.forEach(badge => {
+      const symbol = badge.getAttribute('data-symbol');
+      if (symbol) {
+        const currencyType = getCurrencyType(symbol);
+        if (currencyType) {
+          badge.textContent = currencyType.label;
+          badge.title = currencyType.description;
+        }
+      }
+    });
   }
   
   console.log('✅ Interface atualizada para:', appState.language);
