@@ -1,6 +1,5 @@
 // Renderer Process - Interface integrada com a API Multi-Exchange
 
-// Estado global da aplicação
 const appState = {
   linkedExchanges: [],
   availableExchanges: [],
@@ -8,30 +7,27 @@ const appState = {
   currentView: 'dashboard',
   updateInterval: null,
   selectedPeriod: '7d',
-  hideZeroBalances: true, // Por padrão oculta exchanges zeradas (toggle inicia marcado)
+  hideZeroBalances: true,
   tickersLoading: {
     total: 0,
     loaded: 0,
     exchanges: {}
   },
-  historyChart: null, // Armazena instância do Chart.js
-  showBRL: false, // Mostrar valores em BRL
-  language: 'pt', // Idioma padrão
-  darkMode: true, // Dark mode ativado por padrão
+  historyChart: null,
+  showBRL: false,
+  language: 'pt',
+  darkMode: true,
   expandedExchanges: new Set(),
   activeTokenModal: null,
   exchangeDetailsCache: {},
-  robotStrategies: [] // Estratégias de automação
+  robotStrategies: []
 };
 
-// Lista de moedas fiduciárias e stablecoins
 const FIAT_CURRENCIES = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'ARS', 'MXN'];
 const STABLECOINS = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP', 'USDD', 'GUSD', 'PYUSD', 'FDUSD'];
 
-// Traduções do sistema
 const translations = {
   pt: {
-    // Dashboard
     total: 'Total',
     exchanges: 'Corretoras',
     tokens: 'Tokens',
@@ -40,18 +36,12 @@ const translations = {
     loading: 'Carregando informações...',
     home: 'Início',
     robot: 'Robot',
-    
-    // Cards Dashboard
     totalPortfolio: 'Total',
-    
-    // Títulos de Seção
     connectedExchanges: 'Corretoras Conectadas',
     availableExchanges: 'Corretoras Disponíveis',
     tokenList: 'Lista de Tokens',
     priceHistory: 'Histórico de Preços',
     historyChartTitle: 'Evolução do Portfolio',
-    
-    // Botões
     refresh: 'Atualizar',
     save: 'Salvar',
     cancel: 'Cancelar',
@@ -65,8 +55,6 @@ const translations = {
     addExchange: '+ Corretora',
     selectExchange: 'Selecione a Corretora',
     loadingExchanges: 'Carregando corretoras...',
-    
-    // Labels
     balance: 'Saldo',
     value: 'Valor',
     amount: 'Quantidade',
@@ -75,8 +63,6 @@ const translations = {
     symbol: 'Símbolo',
     name: 'Nome',
     hideZero: 'Ocultar Zeradas',
-    
-    // Settings
     darkMode: 'Modo Escuro',
     darkModeDesc: 'Tema dark/light para o aplicativo',
     brlConversion: 'Conversão em Reais',
@@ -85,22 +71,16 @@ const translations = {
     languageDesc: 'Português ou English',
     userId: 'ID do Usuário',
     userIdDesc: 'Identificador único para suas configurações',
-    
-    // Moedas
     fiatCurrency: '💵 Moeda Fiduciária',
     stablecoin: '🔒 Stablecoin',
     fiatDesc: 'Não possui variação de mercado',
     stablecoinDesc: 'Atrelada a moeda fiduciária',
-    
-    // Mensagens
     noData: 'Nenhum dado disponível',
     noExchanges: 'Nenhuma exchange conectada',
     noTokens: 'Nenhum token encontrado',
     loadingData: 'Carregando dados...',
     error: 'Erro',
     success: 'Sucesso',
-    
-    // Robot
     robotTitle: 'Robot - Automações',
     robotDesc: 'Configure estratégias automáticas de compra e venda',
     newStrategy: 'Nova Estratégia',
@@ -108,7 +88,6 @@ const translations = {
     activeStrategies: 'Estratégias Ativas'
   },
   en: {
-    // Dashboard
     total: 'Total',
     exchanges: 'Exchanges',
     tokens: 'Tokens',
@@ -118,17 +97,14 @@ const translations = {
     home: 'Home',
     robot: 'Robot',
     
-    // Cards Dashboard
     totalPortfolio: 'Total',
     
-    // Títulos de Seção
     connectedExchanges: 'Connected Exchanges',
     availableExchanges: 'Available Exchanges',
     tokenList: 'Token List',
     priceHistory: 'Price History',
     historyChartTitle: 'Portfolio Evolution',
     
-    // Botões
     refresh: 'Refresh',
     save: 'Save',
     cancel: 'Cancel',
@@ -143,7 +119,6 @@ const translations = {
     selectExchange: 'Select Exchange',
     loadingExchanges: 'Loading exchanges...',
     
-    // Labels
     balance: 'Balance',
     value: 'Value',
     amount: 'Amount',
@@ -153,7 +128,6 @@ const translations = {
     name: 'Name',
     hideZero: 'Hide Zero',
     
-    // Settings
     darkMode: 'Dark Mode',
     darkModeDesc: 'Dark/light theme for the app',
     brlConversion: 'BRL Conversion',
@@ -163,13 +137,11 @@ const translations = {
     userId: 'User ID',
     userIdDesc: 'Unique identifier for your settings',
     
-    // Moedas
     fiatCurrency: '💵 Fiat Currency',
     stablecoin: '🔒 Stablecoin',
     fiatDesc: 'No market variation',
     stablecoinDesc: 'Pegged to fiat currency',
     
-    // Mensagens
     noData: 'No data available',
     noExchanges: 'No exchanges connected',
     noTokens: 'No tokens found',
@@ -177,7 +149,6 @@ const translations = {
     error: 'Error',
     success: 'Success',
     
-    // Robot
     robotTitle: 'Robot - Automations',
     robotDesc: 'Configure automatic buy and sell strategies',
     newStrategy: 'New Strategy',
@@ -234,17 +205,14 @@ async function loadViewData(viewName) {
         // TODO: Implementar carregamento de orders
         break;
       default:
-        // console.warn('⚠️ View desconhecida:', viewName);
     }
   } catch (error) {
     console.error('❌ Erro em loadViewData:', error);
   }
 }
 
-// ==================== DASHBOARD ====================
 
 async function loadDashboardData() {
-  // console.log('📊 Carregando dados do dashboard...');
   try {
     // Carrega exchanges vinculadas
     const linkedData = await api.getLinkedExchanges();
@@ -266,17 +234,13 @@ async function loadDashboardData() {
       
       // Aguarda o carregamento de todos os tickers antes de finalizar
       if (appState.tickerPromises) {
-        // console.log('⏳ Aguardando carregamento de tickers...');
         await appState.tickerPromises;
-        // console.log('✅ Todos os tickers carregados');
       }
     } else {
       // Fallback: renderiza exchanges simples
-      // console.warn('⚠️ renderDashboardExchangesWithBalances não encontrada, usando fallback');
       renderDashboardExchanges(appState.linkedExchanges);
     }
     
-    // console.log('✅ Dashboard carregado com sucesso');
     
   } catch (error) {
     console.error('❌ Erro ao carregar dashboard:', error);
@@ -422,12 +386,9 @@ async function toggleExchangeDetails(exchangeId) {
 
 // Função para expandir automaticamente exchanges com saldo ao iniciar
 function autoExpandExchanges() {
-  // console.log('🔓 Auto-expandindo exchanges...');
-  // console.log('📌 hideZeroBalances:', appState.hideZeroBalances);
   
   // Usa os dados de balances ao invés de tentar ler o DOM
   if (!appState.balances || !appState.balances.exchanges) {
-    // console.log('⚠️ Dados de balances não disponíveis ainda');
     return;
   }
   
@@ -436,16 +397,12 @@ function autoExpandExchanges() {
     const totalUSD = exchange.total_usd || 0;
     const hasBalance = totalUSD > 0;
     
-    // console.log(`\n📋 Exchange: ${exchange.name} (${exchangeId})`);
-    // console.log('  💰 Total USD:', totalUSD);
-    // console.log('  💵 Tem saldo?', hasBalance);
     
     const details = document.getElementById(`details-${exchangeId}`);
     const icon = document.getElementById(`toggle-icon-${exchangeId}`);
     const textSpan = icon?.parentElement?.querySelector('span:last-child');
     
     if (!details || !icon) {
-      // console.log('  ❌ Elementos DOM não encontrados');
       return;
     }
     
@@ -453,17 +410,14 @@ function autoExpandExchanges() {
     // - SEMPRE expande se tem saldo > 0
     // - Expande zeradas SOMENTE se hideZeroBalances estiver FALSE (desmarcado)
     const shouldExpand = hasBalance || !appState.hideZeroBalances;
-    // console.log('  🎯 Deve expandir?', shouldExpand);
     
     if (shouldExpand) {
       details.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
       if (textSpan) textSpan.textContent = 'Fechar detalhes';
       appState.expandedExchanges.add(exchangeId);
-      // console.log(`  ✅ EXPANDIDO!`);
     } else {
       appState.expandedExchanges.delete(exchangeId);
-      // console.log(`  ⏭️  Mantido colapsado`);
     }
   });
 }
@@ -540,7 +494,6 @@ async function fetchTokenDetailsForExchange(exchangeId, detailsElement) {
 // NOVA FUNÇÃO: Busca tickers de todos os tokens de uma exchange (SEM precisar expandir)
 async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
   try {
-    // console.log(`🔄 Buscando tickers para exchange ${exchangeId}...`);
     
     const tokenEntries = Object.entries(tokens);
     // Filtra apenas tokens com valor (não exclui mais fiat/stablecoins para busca de ticker)
@@ -555,7 +508,6 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
       appState.tickersLoading.total += tokensWithValue.length;
     }
     
-    // console.log(`📊 Exchange ${exchangeId}: ${tokensWithValue.length} tokens para buscar ticker (incluindo todos os ativos)`);
     
     // Busca tickers em paralelo (máximo 5 por vez para não sobrecarregar)
     const batchSize = 5;
@@ -594,7 +546,6 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
                     );
                   }
                   
-                  // console.log(`✅ Ticker atualizado para ${symbol}: 1h=${exchange.tokens[symbol].change_1h}%, 4h=${exchange.tokens[symbol].change_4h}%, 24h=${exchange.tokens[symbol].change_24h}%`);
                   
                   // Atualiza a UI se a exchange estiver expandida
                   const detailsDiv = document.getElementById(`details-${exchangeId}`);
@@ -608,7 +559,6 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
               }
             }
           } catch (error) {
-            // console.log(`⚠️ Erro ao buscar ticker para ${symbol}:`, error.message);
           }
         })
       );
@@ -619,7 +569,6 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
       }
     }
     
-    // console.log(`✅ Tickers atualizados para exchange ${exchangeId}`);
     
   } catch (error) {
     console.error(`❌ Erro ao buscar tickers da exchange ${exchangeId}:`, error);
@@ -632,23 +581,18 @@ async function fetchTokenTicker(exchangeId, symbol, rowElement) {
     // Busca informações completas do token via CCXT
     const result = await api.getTokenTicker(exchangeId, symbol);
     
-    // console.log(`✅ Ticker para ${symbol}:`, result);
     
     if (result && result.symbol) {
-      // console.log(`✅ Atualizando row para ${symbol} com dados:`, result);
       // Atualiza a linha do token com informações adicionais
       updateTokenRowWithTicker(rowElement, result);
     } else {
-      // console.log(`⚠️ Sem dados de ticker para ${symbol} na exchange ${exchangeId}`);
     }
   } catch (error) {
-    // console.log(`❌ Erro ao buscar ticker para ${symbol}:`, error);
   }
 }
 
 // Função para atualizar linha do token com dados do ticker
 function updateTokenRowWithTicker(rowElement, tokenInfo) {
-  // console.log('📝 Atualizando tokenData com:', tokenInfo);
   
   // Pega o símbolo do token
   const symbol = rowElement.getAttribute('data-token-symbol');
@@ -718,13 +662,11 @@ function updateTokenRowWithTicker(rowElement, tokenInfo) {
     contract: tokenInfo.contract
   };
   
-  // console.log('📦 Dados salvos no row:', updatedData);
   rowElement.setAttribute('data-token-data', JSON.stringify(updatedData));
 }
 
 // Função para mostrar modal de detalhes do token
 async function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
-  // console.log('🔍 Abrindo modal para token:', symbol, 'na exchange:', exchangeName);
   
   appState.activeTokenModal = { symbol, exchangeId, exchangeName };
   
@@ -735,7 +677,6 @@ async function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
   try {
     const tickerData = await api.getTokenTicker(exchangeId, symbol);
     
-    // console.log('✅ Dados do ticker recebidos:', tickerData);
     
     // Atualiza o modal com os dados completos
     updateTokenModalWithData(symbol, tokenData, exchangeName, tickerData);
@@ -836,7 +777,6 @@ function updateTokenModalWithData(symbol, tokenData, exchangeName, tickerData) {
   // Usa preço do ticker se disponível
   const currentPrice = ticker?.price?.current || tokenData.price_usd || 0;
   
-  // console.log('📊 Atualizando modal - Preço:', currentPrice, 'Ticker:', hasTicker);
   
   // Extrai dados das variações
   const change1h = ticker?.change?.['1h']?.price_change_percent;
@@ -1278,7 +1218,6 @@ function reorderCardsByValue(values) {
   });
 }
 
-// ==================== EXCHANGES ====================
 
 async function loadExchangesData() {
   try {
@@ -1394,7 +1333,6 @@ function renderLinkedExchanges(exchanges) {
   });
 }
 
-// ==================== BALANCES ====================
 
 async function loadBalancesData(forceRefresh = false) {
   try {
@@ -1579,7 +1517,6 @@ function renderExchangeBalance(exchange) {
   `;
 }
 
-// ==================== HISTORY ====================
 
 // Estado do gráfico
 const chartState = {
@@ -2025,7 +1962,6 @@ function refreshCurrencySensitiveViews() {
   refreshTokenModalFromState();
 }
 
-// ==================== SETTINGS ====================
 
 function loadSettingsData() {
   console.log('⚙️ Carregando dados de configurações...');
@@ -2258,7 +2194,6 @@ function saveSettings() {
   showNotification('⚙️ Configurações salvas com sucesso!', 'success');
 }
 
-// ==================== ROBOT (AUTOMAÇÕES) ====================
 
 function loadRobotData() {
   console.log('🤖 Carregando dados de automações...');
@@ -2509,7 +2444,6 @@ window.deleteRobotStrategy = function(index) {
   }
 };
 
-// ==================== MANUAL REFRESH ====================
 
 let isRefreshing = false;
 
@@ -2556,7 +2490,6 @@ async function handleManualRefresh() {
   }
 }
 
-// ==================== NAVEGAÇÃO ====================
 
 async function switchView(viewName) {
   console.log('🔄 Trocando para view:', viewName);
@@ -2623,7 +2556,6 @@ function switchViewOnly(viewName) {
   });
 }
 
-// ==================== EVENT LISTENERS ====================
 
 function setupEventListeners() {
   // Navegação entre views
@@ -2907,7 +2839,6 @@ window.toggleZeroBalancesDashboard = function() {
   }
 };
 
-// ==================== AUTO UPDATE ====================
 
 function startAutoUpdate() {
   // Limpa intervalo anterior se existir
@@ -2958,7 +2889,6 @@ function startAutoUpdate() {
   console.log('⏰ Auto-refresh configurado para 2 minutos');
 }
 
-// ==================== UTILITY FUNCTIONS ====================
 
 function getExchangeIcon(exchangeId) {
   // Mapeia exchange ID/nome para o arquivo de ícone
@@ -3116,7 +3046,6 @@ function showNotification(message, type = 'info') {
   }, 5000);
 }
 
-// ==================== ELECTRON INTEGRATION ====================
 
 async function loadAppInfo() {
   try {
@@ -3137,7 +3066,6 @@ async function loadAppInfo() {
   }
 }
 
-// ==================== TIMESTAMP UPDATE ====================
 
 function updateTimestamp() {
   const now = new Date();
@@ -3162,7 +3090,6 @@ function updateLoadingMessage(message, progressPercent) {
   }
 }
 
-// ==================== INICIALIZAÇÃO DO APP ====================
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 Iniciando aplicação...');
