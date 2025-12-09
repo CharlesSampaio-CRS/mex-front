@@ -29,6 +29,87 @@ const appState = {
 const FIAT_CURRENCIES = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'ARS', 'MXN'];
 const STABLECOINS = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP', 'USDD', 'GUSD', 'PYUSD', 'FDUSD'];
 
+// Traduções do sistema
+const translations = {
+  pt: {
+    // Dashboard
+    total: 'Total',
+    exchanges: 'Corretoras',
+    tokens: 'Tokens',
+    history: 'Histórico',
+    settings: 'Configurações',
+    loading: 'Carregando informações...',
+    home: 'Home',
+    
+    // Cards
+    totalPortfolio: 'Total',
+    
+    // Botões
+    refresh: 'Atualizar',
+    save: 'Salvar',
+    cancel: 'Cancelar',
+    add: 'Adicionar',
+    remove: 'Remover',
+    edit: 'Editar',
+    delete: 'Excluir',
+    
+    // Settings
+    darkMode: 'Modo Escuro',
+    darkModeDesc: 'Tema dark/light para o aplicativo',
+    brlConversion: 'Conversão em Reais',
+    brlConversionDesc: 'Mostrar valores também em BRL (R$)',
+    language: 'Idioma',
+    languageDesc: 'Português ou English',
+    
+    // Moedas
+    fiatCurrency: '💵 Moeda Fiduciária',
+    stablecoin: '🔒 Stablecoin',
+    fiatDesc: 'Não possui variação de mercado',
+    stablecoinDesc: 'Atrelada a moeda fiduciária'
+  },
+  en: {
+    // Dashboard
+    total: 'Total',
+    exchanges: 'Exchanges',
+    tokens: 'Tokens',
+    history: 'History',
+    settings: 'Settings',
+    loading: 'Loading information...',
+    home: 'Home',
+    
+    // Cards
+    totalPortfolio: 'Total',
+    
+    // Botões
+    refresh: 'Refresh',
+    save: 'Save',
+    cancel: 'Cancel',
+    add: 'Add',
+    remove: 'Remove',
+    edit: 'Edit',
+    delete: 'Delete',
+    
+    // Settings
+    darkMode: 'Dark Mode',
+    darkModeDesc: 'Dark/light theme for the app',
+    brlConversion: 'BRL Conversion',
+    brlConversionDesc: 'Show values in BRL (R$)',
+    language: 'Language',
+    languageDesc: 'Portuguese or English',
+    
+    // Moedas
+    fiatCurrency: '💵 Fiat Currency',
+    stablecoin: '🔒 Stablecoin',
+    fiatDesc: 'No market variation',
+    stablecoinDesc: 'Pegged to fiat currency'
+  }
+};
+
+// Função para obter tradução
+function t(key) {
+  return translations[appState.language][key] || key;
+}
+
 // Função para verificar se é moeda fiduciária ou stablecoin
 function isFiatOrStablecoin(symbol) {
   const upperSymbol = symbol.toUpperCase();
@@ -39,10 +120,10 @@ function isFiatOrStablecoin(symbol) {
 function getCurrencyType(symbol) {
   const upperSymbol = symbol.toUpperCase();
   if (FIAT_CURRENCIES.includes(upperSymbol)) {
-    return { type: 'fiat', label: '💵 Moeda Fiduciária', description: 'Não possui variação de mercado' };
+    return { type: 'fiat', label: t('fiatCurrency'), description: t('fiatDesc') };
   }
   if (STABLECOINS.includes(upperSymbol)) {
-    return { type: 'stablecoin', label: '🔒 Stablecoin', description: 'Atrelada a moeda fiduciária' };
+    return { type: 'stablecoin', label: t('stablecoin'), description: t('stablecoinDesc') };
   }
   return null;
 }
@@ -1699,15 +1780,61 @@ function applyDarkMode(isDark) {
   console.log('🎨 Tema aplicado:', isDark ? '🌙 DARK MODE' : '☀️ LIGHT MODE');
 }
 
-// Atualiza o label do idioma
+// Atualiza o label do idioma e toda a interface
 function updateLanguageLabel(lang) {
+  appState.language = lang;
+  
   const label = document.querySelector('.language-label');
   if (label) {
     label.textContent = lang === 'pt' ? 'PT' : 'EN';
   }
   
-  // Aqui você pode adicionar a lógica de tradução futuramente
-  appState.language = lang;
+  console.log(`🌐 Idioma alterado para: ${lang === 'pt' ? 'Português' : 'English'}`);
+  
+  // Atualiza todos os textos da interface
+  updateInterfaceLanguage();
+}
+
+// Função para atualizar todos os textos da interface
+function updateInterfaceLanguage() {
+  // Atualiza tooltips da navegação
+  const navButtons = [
+    { selector: 'button[data-view="dashboard"]', key: 'home' },
+    { selector: 'button[data-view="exchanges"]', key: 'exchanges' },
+    { selector: 'button[data-view="history"]', key: 'history' },
+    { selector: 'button[data-view="settings"]', key: 'settings' }
+  ];
+  
+  navButtons.forEach(item => {
+    const el = document.querySelector(item.selector);
+    if (el) el.title = t(item.key);
+  });
+  
+  // Atualiza mensagem de loading
+  const loadingMsg = document.getElementById('loading-message');
+  if (loadingMsg) loadingMsg.textContent = t('loading');
+  
+  // Atualiza Settings
+  updateSettingsLanguage();
+  
+  // Se estiver na view de tokens, recarrega a lista para atualizar badges
+  if (appState.currentView === 'tokens') {
+    renderTokensList(appState.balances);
+  }
+  
+  console.log('✅ Interface atualizada para:', appState.language);
+}
+
+// Atualiza textos da página de configurações
+function updateSettingsLanguage() {
+  // Atualiza todos os elementos com data-i18n
+  const elements = document.querySelectorAll('[data-i18n]');
+  elements.forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key && translations[appState.language][key]) {
+      el.textContent = t(key);
+    }
+  });
 }
 
 // Salva as configurações
