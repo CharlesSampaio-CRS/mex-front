@@ -1681,7 +1681,7 @@ function drawHistoryChart(dataPoints, period) {
       }]
     },
     options: {
-      responsive: false,
+      responsive: true,
       maintainAspectRatio: false,
       animation: {
         duration: 750,
