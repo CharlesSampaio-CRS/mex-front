@@ -1447,9 +1447,20 @@ async function loadHistoryData(period = '7d') {
     const response = await api.getPortfolioEvolution(period);
     console.log('✅ Dados recebidos da API:', response);
     
-    // Novo formato da API: { success, evolution: { data_points, summary } }
     const evolution = response.evolution || {};
-    const data_points = evolution.data_points || [];
+    
+    // A API retorna arrays separados: timestamps, values_usd, values_brl
+    // Precisamos transformar em array de objetos
+    const timestamps = evolution.timestamps || [];
+    const values_usd = evolution.values_usd || [];
+    const values_brl = evolution.values_brl || [];
+    
+    const data_points = timestamps.map((timestamp, index) => ({
+      timestamp: timestamp,
+      total_usd: values_usd[index] || 0,
+      total_brl: values_brl[index] || 0
+    }));
+    
     const summary = evolution.summary || {};
     
     console.log('📊 Data points processados:', data_points.length, 'pontos');
