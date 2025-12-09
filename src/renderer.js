@@ -61,9 +61,9 @@ const translations = {
     connect: 'Conectar',
     disconnect: 'Desconectar',
     details: 'Detalhes',
-    addExchange: '+ Exchange',
-    selectExchange: 'Selecione a Exchange',
-    loadingExchanges: 'Carregando exchanges...',
+    addExchange: '+ Corretora',
+    selectExchange: 'Selecione a Corretora',
+    loadingExchanges: 'Carregando corretoras...',
     
     // Labels
     balance: 'Saldo',
