@@ -706,48 +706,41 @@ function updateTokenRowWithTicker(rowElement, tokenInfo) {
 }
 
 // Função para mostrar modal de detalhes do token
-function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
-  // URLs específicas da exchange e do token
-  const exchangeIconPath = getExchangeIcon(exchangeName);
-
+async function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
+  console.log('🔍 Abrindo modal para token:', symbol, 'na exchange:', exchangeName);
+  
   appState.activeTokenModal = { symbol, exchangeId, exchangeName };
   
-  // Log para debug
-  console.log('Token Data no Modal:', tokenData);
+  // Mostra modal com loading primeiro
+  showTokenModalWithLoading(symbol, tokenData, exchangeName);
   
-  // Verifica se é moeda fiduciária ou stablecoin
+  // Busca dados completos do ticker da API
+  try {
+    const tickerData = await api.getTokenTicker(exchangeId, symbol);
+    
+    console.log('✅ Dados do ticker recebidos:', tickerData);
+    
+    // Atualiza o modal com os dados completos
+    updateTokenModalWithData(symbol, tokenData, exchangeName, tickerData);
+  } catch (error) {
+    console.error('❌ Erro ao buscar dados do ticker:', error);
+    // Atualiza modal mostrando apenas dados básicos
+    updateTokenModalWithData(symbol, tokenData, exchangeName, null);
+  }
+}
+
+// Função para mostrar modal com loading
+function showTokenModalWithLoading(symbol, tokenData, exchangeName) {
   const currencyInfo = getCurrencyType(symbol);
   const isFiatStable = currencyInfo !== null;
-  
-  // Verifica se tem dados do ticker da API
-  const ticker = tokenData.ticker;
-  const hasTicker = ticker && ticker.symbol;
-  
-  // Usa preço do ticker se disponível (já vem formatado como string da API)
-  const currentPrice = ticker?.price?.current || tokenData.price_usd || 0;
-  
-  console.log('Preço atual:', currentPrice, 'Tipo:', typeof currentPrice);
-  console.log('Ticker completo:', ticker);
-  
-  // Extrai dados das variações (estrutura da API: change.24h.price_change_percent)
-  const change1h = ticker?.change?.['1h']?.price_change_percent;
-  const change4h = ticker?.change?.['4h']?.price_change_percent;
-  const change24h = ticker?.change?.['24h']?.price_change_percent;
-  
-  // Extrai dados de preço e volume (já vêm formatados da API)
-  const volume24h = ticker?.volume?.quote_24h;
-  const high24h = ticker?.price?.high_24h;
-  const low24h = ticker?.price?.low_24h;
-  const pair = ticker?.pair || 'USD';
-  const contract = ticker?.contract;
   
   const modalHTML = `
     <div id="token-modal" class="modal-overlay animate-fade-in">
       <div class="modal-content animate-scale-in max-h-[90vh] overflow-hidden">
-        <!-- Header Compacto -->
+        <!-- Header -->
         <div class="relative p-4 border-b border-primary-500/30 bg-gradient-to-r from-primary-900/20 via-dark-800 to-dark-900">
           <div class="flex-1 text-center">
-            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-500/30 mb-2 animate-pulse-slow">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-500/30 mb-2">
               <span class="text-2xl">${isFiatStable ? (currencyInfo.type === 'fiat' ? '💵' : '🔒') : '💎'}</span>
             </div>
             <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-600">${symbol}</h2>
@@ -756,121 +749,11 @@ function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
           <button class="absolute top-3 right-3 text-dark-400 hover:text-dark-100 text-2xl leading-none transition-all hover:rotate-90 duration-300 close-modal-btn" data-action="close">×</button>
         </div>
         
-        <!-- Content Compacto -->
-        <div class="p-4 space-y-3">
-          <!-- Linha 1: Preço e Valor -->
-          <div class="grid grid-cols-2 gap-3">
-            <div class="p-3 bg-gradient-to-br from-emerald-500/10 to-green-600/10 rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300 group">
-              <div class="flex items-center space-x-1.5 mb-1.5">
-                <span class="text-base">💵</span>
-                <p class="text-xs text-dark-400 font-medium">Preço Unitário</p>
-              </div>
-              <p class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-500">${formatTokenPrice(currentPrice)}</p>
-              ${change24h !== undefined && change24h !== null && change24h !== 0 ? `
-                <div class="mt-1.5 inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-xs ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
-                  <span class="font-bold">${change24h >= 0 ? '▲' : '▼'} ${Math.abs(change24h).toFixed(2)}%</span>
-                  <span class="opacity-70">(24h)</span>
-                </div>
-              ` : ''}
-            </div>
-            <div class="p-3 bg-gradient-to-br from-primary-500/10 to-blue-600/10 rounded-xl border border-primary-500/20 hover:border-primary-500/40 transition-all duration-300 group">
-              <div class="flex items-center space-x-1.5 mb-1.5">
-                <span class="text-base">💰</span>
-                <p class="text-xs text-dark-400 font-medium">Saldo Total</p>
-              </div>
-              <p class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-blue-500">${formatCurrency(tokenData.value_usd)}</p>
-              <p class="text-xs text-dark-400 mt-1.5 flex items-center space-x-1">
-                <span class="w-1 h-1 rounded-full bg-primary-500 animate-pulse"></span>
-                <span>${formatNumber(tokenData.amount)} ${symbol}</span>
-              </p>
-            </div>
-          </div>
-          
-          ${isFiatStable ? `
-          <!-- Alerta: Moeda Fiduciária / Stablecoin -->
-          <div class="p-3 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/30">
-            <div class="flex items-center space-x-2">
-              <span class="text-2xl">${currencyInfo.type === 'fiat' ? '💵' : '🔒'}</span>
-              <div class="flex-1">
-                <p class="text-sm font-semibold text-blue-400">${currencyInfo.label}</p>
-                <p class="text-xs text-blue-300/70 mt-0.5">${currencyInfo.description}</p>
-              </div>
-            </div>
-          </div>
-          ` : ''}
-          
-          ${!isFiatStable && hasTicker && (change1h !== undefined || change4h !== undefined || change24h !== undefined) && (change1h !== 0 || change4h !== 0 || change24h !== 0) ? `
-          <!-- Linha 2: Variações Compactas -->
-          <div class="p-3 bg-gradient-to-br from-dark-700/30 to-dark-800/30 rounded-xl border border-dark-600/50">
-            <div class="flex items-center space-x-1.5 mb-2">
-              <span class="text-sm">📊</span>
-              <p class="text-xs text-dark-300 font-semibold">Variações de Preço</p>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              ${change1h !== undefined && change1h !== null && change1h !== 0 ? `
-                <div class="text-center p-2 bg-dark-800/50 rounded-lg border ${change1h >= 0 ? 'border-green-500/20' : 'border-red-500/20'}">
-                  <p class="text-[9px] text-dark-500 mb-0.5 uppercase tracking-wider">1h</p>
-                  <p class="text-sm font-bold ${change1h >= 0 ? 'text-green-400' : 'text-red-400'}">
-                    ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(2)}%
-                  </p>
-                </div>
-              ` : ''}
-              ${change4h !== undefined && change4h !== null && change4h !== 0 ? `
-                <div class="text-center p-2 bg-dark-800/50 rounded-lg border ${change4h >= 0 ? 'border-green-500/20' : 'border-red-500/20'}">
-                  <p class="text-[9px] text-dark-500 mb-0.5 uppercase tracking-wider">4h</p>
-                  <p class="text-sm font-bold ${change4h >= 0 ? 'text-green-400' : 'text-red-400'}">
-                    ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(2)}%
-                  </p>
-                </div>
-              ` : ''}
-              ${change24h !== undefined && change24h !== null && change24h !== 0 ? `
-                <div class="text-center p-2 bg-dark-800/50 rounded-lg border ${change24h >= 0 ? 'border-green-500/20' : 'border-red-500/20'}">
-                  <p class="text-[9px] text-dark-500 mb-0.5 uppercase tracking-wider">24h</p>
-                  <p class="text-sm font-bold ${change24h >= 0 ? 'text-green-400' : 'text-red-400'}">
-                    ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(2)}%
-                  </p>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-          ` : ''}
-          
-          ${hasTicker && (high24h || low24h || volume24h) && (high24h > 0 || low24h > 0 || volume24h > 0) ? `
-          <!-- Linha 3: Dados 24h Compactos -->
-          <div class="p-3 bg-gradient-to-br from-dark-700/30 to-dark-800/30 rounded-xl border border-dark-600/50">
-            <div class="flex items-center space-x-1.5 mb-2">
-              <span class="text-sm">📈</span>
-              <p class="text-xs text-dark-300 font-semibold">Estatísticas 24h</p>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              ${high24h ? `
-                <div class="text-center p-2 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-lg border border-green-500/20">
-                  <p class="text-[9px] text-green-400/70 mb-0.5 uppercase tracking-wider">⬆ Alta</p>
-                  <p class="text-xs font-semibold text-green-400">${formatTokenPrice(high24h)}</p>
-                </div>
-              ` : ''}
-              ${low24h ? `
-                <div class="text-center p-2 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-lg border border-red-500/20">
-                  <p class="text-[9px] text-red-400/70 mb-0.5 uppercase tracking-wider">⬇ Baixa</p>
-                  <p class="text-xs font-semibold text-red-400">${formatTokenPrice(low24h)}</p>
-                </div>
-              ` : ''}
-              ${volume24h ? `
-                <div class="text-center p-2 bg-gradient-to-br from-primary-500/5 to-blue-500/5 rounded-lg border border-primary-500/20">
-                  <p class="text-[9px] text-primary-400/70 mb-0.5 uppercase tracking-wider">📊 Vol</p>
-                  <p class="text-xs font-semibold text-primary-400">${formatCurrency(volume24h)}</p>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-          ` : ''}
-          
-          <!-- Footer Compacto -->
-          <div class="pt-1">
-            <button class="w-full py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white font-semibold rounded-lg shadow-lg shadow-primary-500/30 transition-all duration-300 hover:scale-[1.02] active:scale-95 close-modal-btn" data-action="close">
-              ✨ Fechar
-            </button>
-          </div>
+        <!-- Loading Content -->
+        <div id="modal-content" class="p-8 flex flex-col items-center justify-center min-h-[300px]">
+          <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-500/30 border-t-primary-500 mb-4"></div>
+          <p class="text-dark-300 text-lg font-semibold">Carregando dados do token...</p>
+          <p class="text-dark-500 text-sm mt-2">Buscando informações em tempo real</p>
         </div>
       </div>
     </div>
@@ -884,6 +767,182 @@ function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
   document.body.insertAdjacentHTML('beforeend', modalHTML);
   
   // Adiciona event listeners
+  attachModalCloseListeners();
+}
+
+// Função para atualizar modal com dados completos
+function updateTokenModalWithData(symbol, tokenData, exchangeName, tickerData) {
+  const modalContent = document.getElementById('modal-content');
+  if (!modalContent) return;
+  
+  // Verifica se é moeda fiduciária ou stablecoin
+  const currencyInfo = getCurrencyType(symbol);
+  const isFiatStable = currencyInfo !== null;
+  
+  // Usa dados do ticker se disponível
+  const ticker = tickerData || tokenData.ticker;
+  const hasTicker = ticker && ticker.symbol;
+  
+  // Usa preço do ticker se disponível
+  const currentPrice = ticker?.price?.current || tokenData.price_usd || 0;
+  
+  console.log('📊 Atualizando modal - Preço:', currentPrice, 'Ticker:', hasTicker);
+  
+  // Extrai dados das variações
+  const change1h = ticker?.change?.['1h']?.price_change_percent;
+  const change4h = ticker?.change?.['4h']?.price_change_percent;
+  const change24h = ticker?.change?.['24h']?.price_change_percent;
+  
+  // Extrai dados de preço e volume
+  const volume24h = ticker?.volume?.quote_24h;
+  const high24h = ticker?.price?.high_24h;
+  const low24h = ticker?.price?.low_24h;
+  
+  const contentHTML = `
+    <div class="p-4 space-y-3">
+      <!-- Linha 1: Preço e Valor -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-gradient-to-br from-emerald-500/10 to-green-600/10 rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300 group">
+          <div class="flex items-center space-x-1.5 mb-1.5">
+            <span class="text-base">💵</span>
+            <p class="text-xs text-dark-400 font-medium">Preço Unitário</p>
+          </div>
+          <p class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-500">${formatTokenPrice(currentPrice)}</p>
+          ${change24h !== undefined && change24h !== null && change24h !== 0 ? `
+            <div class="mt-1.5 inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-xs ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+              <span class="font-bold">${change24h >= 0 ? '▲' : '▼'} ${Math.abs(change24h).toFixed(2)}%</span>
+              <span class="opacity-70">(24h)</span>
+            </div>
+          ` : ''}
+        </div>
+        <div class="p-3 bg-gradient-to-br from-primary-500/10 to-blue-600/10 rounded-xl border border-primary-500/20 hover:border-primary-500/40 transition-all duration-300 group">
+          <div class="flex items-center space-x-1.5 mb-1.5">
+            <span class="text-base">💰</span>
+            <p class="text-xs text-dark-400 font-medium">Saldo Total</p>
+          </div>
+          <p class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-blue-500">${formatCurrency(tokenData.value_usd)}</p>
+          <p class="text-xs text-dark-400 mt-1.5 flex items-center space-x-1">
+            <span class="w-1 h-1 rounded-full bg-primary-500 animate-pulse"></span>
+            <span>${formatNumber(tokenData.amount)} ${symbol}</span>
+          </p>
+        </div>
+      </div>
+      
+      ${isFiatStable ? `
+      <!-- Alerta: Moeda Fiduciária / Stablecoin -->
+      <div class="p-3 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/30">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">${currencyInfo.type === 'fiat' ? '💵' : '🔒'}</span>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-blue-400">${currencyInfo.label}</p>
+            <p class="text-xs text-blue-300/70 mt-0.5">${currencyInfo.description}</p>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+      
+      ${!isFiatStable && hasTicker && (change1h !== undefined || change4h !== undefined || change24h !== undefined) && (change1h !== 0 || change4h !== 0 || change24h !== 0) ? `
+      <!-- Linha 2: Variações Compactas -->
+      <div class="p-3 bg-gradient-to-br from-dark-700/30 to-dark-800/30 rounded-xl border border-dark-600/50">
+        <div class="flex items-center space-x-1.5 mb-2">
+          <span class="text-sm">📊</span>
+          <p class="text-xs text-dark-300 font-semibold">Variações de Preço</p>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          ${change1h !== undefined && change1h !== null && change1h !== 0 ? `
+            <div class="text-center p-2 bg-dark-800/50 rounded-lg border ${change1h >= 0 ? 'border-green-500/20' : 'border-red-500/20'}">
+              <p class="text-[9px] text-dark-500 mb-0.5 uppercase tracking-wider">1h</p>
+              <p class="text-sm font-bold ${change1h >= 0 ? 'text-green-400' : 'text-red-400'}">
+                ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(2)}%
+              </p>
+            </div>
+          ` : ''}
+          ${change4h !== undefined && change4h !== null && change4h !== 0 ? `
+            <div class="text-center p-2 bg-dark-800/50 rounded-lg border ${change4h >= 0 ? 'border-green-500/20' : 'border-red-500/20'}">
+              <p class="text-[9px] text-dark-500 mb-0.5 uppercase tracking-wider">4h</p>
+              <p class="text-sm font-bold ${change4h >= 0 ? 'text-green-400' : 'text-red-400'}">
+                ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(2)}%
+              </p>
+            </div>
+          ` : ''}
+          ${change24h !== undefined && change24h !== null && change24h !== 0 ? `
+            <div class="text-center p-2 bg-dark-800/50 rounded-lg border ${change24h >= 0 ? 'border-green-500/20' : 'border-red-500/20'}">
+              <p class="text-[9px] text-dark-500 mb-0.5 uppercase tracking-wider">24h</p>
+              <p class="text-sm font-bold ${change24h >= 0 ? 'text-green-400' : 'text-red-400'}">
+                ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(2)}%
+              </p>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${hasTicker && (high24h || low24h || volume24h) && (high24h > 0 || low24h > 0 || volume24h > 0) ? `
+      <!-- Linha 3: Dados 24h Compactos -->
+      <div class="p-3 bg-gradient-to-br from-dark-700/30 to-dark-800/30 rounded-xl border border-dark-600/50">
+        <div class="flex items-center space-x-1.5 mb-2">
+          <span class="text-sm">📈</span>
+          <p class="text-xs text-dark-300 font-semibold">Estatísticas 24h</p>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          ${high24h ? `
+            <div class="text-center p-2 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-lg border border-green-500/20">
+              <p class="text-[9px] text-green-400/70 mb-0.5 uppercase tracking-wider">⬆ Alta</p>
+              <p class="text-xs font-semibold text-green-400">${formatTokenPrice(high24h)}</p>
+            </div>
+          ` : ''}
+          ${low24h ? `
+            <div class="text-center p-2 bg-gradient-to-br from-red-500/5 to-rose-500/5 rounded-lg border border-red-500/20">
+              <p class="text-[9px] text-red-400/70 mb-0.5 uppercase tracking-wider">⬇ Baixa</p>
+              <p class="text-xs font-semibold text-red-400">${formatTokenPrice(low24h)}</p>
+            </div>
+          ` : ''}
+          ${volume24h ? `
+            <div class="text-center p-2 bg-gradient-to-br from-primary-500/5 to-blue-500/5 rounded-lg border border-primary-500/20">
+              <p class="text-[9px] text-primary-400/70 mb-0.5 uppercase tracking-wider">📊 Vol</p>
+              <p class="text-xs font-semibold text-primary-400">${formatCurrency(volume24h)}</p>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${!hasTicker && !isFiatStable ? `
+      <!-- Aviso: Sem dados do ticker -->
+      <div class="p-3 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 rounded-xl border border-yellow-500/30">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">⚠️</span>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-yellow-400">Dados Limitados</p>
+            <p class="text-xs text-yellow-300/70 mt-0.5">Informações de mercado não disponíveis para este token</p>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+      
+      <!-- Footer Compacto -->
+      <div class="pt-1">
+        <button class="w-full py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white font-semibold rounded-lg shadow-lg shadow-primary-500/30 transition-all duration-300 hover:scale-[1.02] active:scale-95 close-modal-btn" data-action="close">
+          ✨ Fechar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Atualiza o conteúdo do modal com animação suave
+  modalContent.style.opacity = '0';
+  setTimeout(() => {
+    modalContent.innerHTML = contentHTML;
+    modalContent.style.opacity = '1';
+    modalContent.style.transition = 'opacity 0.3s ease-in-out';
+    
+    // Reanexa event listeners dos botões de fechar
+    attachModalCloseListeners();
+  }, 150);
+}
+
+// Função para anexar event listeners de fechar modal
+function attachModalCloseListeners() {
   const tokenModal = document.getElementById('token-modal');
   if (tokenModal) {
     tokenModal.querySelectorAll('.close-modal-btn').forEach(btn => {
