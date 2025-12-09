@@ -61,6 +61,9 @@ const translations = {
     connect: 'Conectar',
     disconnect: 'Desconectar',
     details: 'Detalhes',
+    addExchange: '+ Exchange',
+    selectExchange: 'Selecione a Exchange',
+    loadingExchanges: 'Carregando exchanges...',
     
     // Labels
     balance: 'Saldo',
@@ -126,6 +129,9 @@ const translations = {
     connect: 'Connect',
     disconnect: 'Disconnect',
     details: 'Details',
+    addExchange: '+ Exchange',
+    selectExchange: 'Select Exchange',
+    loadingExchanges: 'Loading exchanges...',
     
     // Labels
     balance: 'Balance',

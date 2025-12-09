@@ -152,12 +152,12 @@
                 </label>
               </div>
               <button class="btn-primary text-sm" data-view="exchanges">
-                + Exchange
+                <span data-i18n="addExchange">+ Exchange</span>
               </button>
             </div>
           </div>
           <div id="dashboard-exchanges-list" class="space-y-3">
-            <p class="text-dark-400 text-center py-8">Carregando exchanges...</p>
+            <p class="text-dark-400 text-center py-8" data-i18n="loadingExchanges">Carregando exchanges...</p>
           </div>
         </div>
       </div>
@@ -168,15 +168,15 @@
           
           <!-- Card: Conectar Exchange -->
           <div class="card">
-            <h2 class="text-xl font-bold mb-4 text-dark-100">Conectar</h2>
+            <h2 class="text-xl font-bold mb-4 text-dark-100" data-i18n="connect">Conectar</h2>
             
             <form id="add-exchange-form" class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-dark-300 mb-2">
-                  Selecione a Exchange
+                  <span data-i18n="selectExchange">Selecione a Exchange</span>
                 </label>
                 <select id="exchange-select" class="input" required>
-                  <option value="">Carregando exchanges...</option>
+                  <option value="" data-i18n="loadingExchanges">Carregando exchanges...</option>
                 </select>
               </div>
 
