@@ -20,11 +20,47 @@ const appState = {
   expandedExchanges: new Set(),
   activeTokenModal: null,
   exchangeDetailsCache: {},
-  robotStrategies: []
+  robotStrategies: [],
+  domCache: {}
 };
 
 const FIAT_CURRENCIES = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'ARS', 'MXN'];
 const STABLECOINS = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'USDP', 'USDD', 'GUSD', 'PYUSD', 'FDUSD'];
+
+// Utility functions para performance
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
+const throttle = (func, limit) => {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
+
+const getCachedElement = (selector) => {
+  if (!appState.domCache[selector]) {
+    appState.domCache[selector] = document.querySelector(selector);
+  }
+  return appState.domCache[selector];
+};
+
+const clearDOMCache = () => {
+  appState.domCache = {};
+};
 
 const translations = {
   pt: {
@@ -509,8 +545,8 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
     }
     
     
-    // Busca tickers em paralelo (máximo 5 por vez para não sobrecarregar)
-    const batchSize = 5;
+    // Busca tickers em paralelo - reduzido para 3 por vez para melhor performance
+    const batchSize = 3;
     for (let i = 0; i < tokensWithValue.length; i += batchSize) {
       const batch = tokensWithValue.slice(i, i + batchSize);
       
@@ -537,8 +573,8 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
                   const tickerProgress = (appState.tickersLoading.loaded / appState.tickersLoading.total);
                   const totalProgress = 50 + (tickerProgress * 45); // 50% inicial + 45% para tickers
                   
-                  // Só atualiza a barra de loading se ainda existir
-                  const loadingScreen = document.getElementById('loading-screen');
+                  // Só atualiza a barra de loading se ainda existir - throttled
+                  const loadingScreen = getCachedElement('#loading-screen');
                   if (loadingScreen && loadingScreen.style.display !== 'none') {
                     updateLoadingMessage(
                       `Carregando preços: ${appState.tickersLoading.loaded}/${appState.tickersLoading.total}`,
@@ -563,9 +599,9 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
         })
       );
       
-      // Pequeno delay entre batches
+      // Delay entre batches aumentado para 800ms para melhor performance
       if (i + batchSize < tokensWithValue.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
     }
     
@@ -1056,16 +1092,22 @@ function renderDashboardExchangesWithBalances(exchanges, balances, options = {})
     `;
   }).join('');
   
+  // Cache os headers antes do loop para melhor performance
+  const allHeaders = Array.from(container.querySelectorAll('.exchange-header'));
+  
   // Adiciona event listeners após renderizar
-  document.querySelectorAll('.exchange-header').forEach(header => {
+  allHeaders.forEach(header => {
     header.addEventListener('click', function() {
       const exchangeId = this.getAttribute('data-exchange-id');
       toggleExchangeDetails(exchangeId);
     });
   });
   
+  // Cache os token rows para melhor performance
+  const allTokenRows = Array.from(container.querySelectorAll('.token-row'));
+  
   // Adiciona event listeners para tokens (modal)
-  document.querySelectorAll('.token-row').forEach(row => {
+  allTokenRows.forEach(row => {
     row.addEventListener('click', function() {
       const symbol = this.getAttribute('data-token-symbol');
       const exchangeId = this.getAttribute('data-exchange-id');
@@ -1099,11 +1141,18 @@ function renderDashboardExchangesWithBalances(exchanges, balances, options = {})
   console.log(`✅ Renderizadas ${filteredExchanges.length} exchanges no dashboard`);
 }
 
+// Debounced version para evitar updates excessivos
+const updateDashboardBalancesDebounced = debounce((balances) => {
+  updateDashboardBalances(balances);
+}, 300);
+
 function updateDashboardBalances(balances) {
   const totalUSD = balances.summary?.total_usd || 0;
   
+  // Cache elementos do DOM
+  const totalEl = getCachedElement('#dashboard-total');
+  
   // Atualiza total geral
-  const totalEl = document.getElementById('dashboard-total');
   if (totalEl) totalEl.textContent = formatCurrency(totalUSD);
   
   // Calcula totais de BRL, USDT e USDC
@@ -1135,23 +1184,23 @@ function updateDashboardBalances(balances) {
   const brlMultiplier = 5.07; // Taxa de conversão USD para BRL (apenas para comparação)
   
   // Card BRL - sempre em BRL (arredonda para 0 se menor que 1 centavo)
-  const brlEl = document.getElementById('dashboard-brl');
-  if (brlEl) {
-    brlEl.textContent = totalBRL >= 0.01 
+  const brlCard = getCachedElement('#dashboard-brl');
+  if (brlCard) {
+    brlCard.textContent = totalBRL >= 0.01 
       ? `R$ ${formatNumber(totalBRL)}` 
       : 'R$ 0,00';
   }
   
   // Card USDT - sempre em USD (sem conversão)
-  const usdtEl = document.getElementById('dashboard-usdt');
-  if (usdtEl) {
-    usdtEl.textContent = totalUSDT > 0 ? `$ ${formatNumber(totalUSDT)}` : '$0.00';
+  const usdtCard = getCachedElement('#dashboard-usdt');
+  if (usdtCard) {
+    usdtCard.textContent = totalUSDT > 0 ? `$ ${formatNumber(totalUSDT)}` : '$0.00';
   }
   
   // Card USDC - sempre em USD (sem conversão)
-  const usdcEl = document.getElementById('dashboard-usdc');
-  if (usdcEl) {
-    usdcEl.textContent = totalUSDC > 0 ? `$ ${formatNumber(totalUSDC)}` : '$0.00';
+  const usdcCard = getCachedElement('#dashboard-usdc');
+  if (usdcCard) {
+    usdcCard.textContent = totalUSDC > 0 ? `$ ${formatNumber(totalUSDC)}` : '$0.00';
   }
   
   console.log('💰 Totais calculados:', { totalUSD, totalBRL, totalUSDT, totalUSDC });
@@ -1172,7 +1221,7 @@ function updateDashboardBalances(balances) {
 // Função para reordenar cards por valor
 // Cards com valor > 0 primeiro (ordenados), depois os zerados
 function reorderCardsByValue(values) {
-  const container = document.querySelector('#dashboard-view > div.mb-6');
+  const container = getCachedElement('#dashboard-view > div.mb-6');
   if (!container) {
     console.warn('⚠️ Container de cards não encontrado');
     return;
@@ -1188,12 +1237,19 @@ function reorderCardsByValue(values) {
   
   console.log('🔄 Cards antes de ordenar:', cards.map(c => ({ id: c.id, value: c.value })));
   
-  // Pega os elementos dos cards
+  // Pega os elementos dos cards - cacheia o Array.from
   const allCards = Array.from(container.children);
-  cards[0].element = allCards.find(el => el.querySelector('#dashboard-total'));
-  cards[1].element = allCards.find(el => el.querySelector('#dashboard-brl'));
-  cards[2].element = allCards.find(el => el.querySelector('#dashboard-usdt'));
-  cards[3].element = allCards.find(el => el.querySelector('#dashboard-usdc'));
+  
+  // Cache os querySelector em uma única passagem
+  const totalCard = allCards.find(el => el.querySelector('#dashboard-total'));
+  const brlCard = allCards.find(el => el.querySelector('#dashboard-brl'));
+  const usdtCard = allCards.find(el => el.querySelector('#dashboard-usdt'));
+  const usdcCard = allCards.find(el => el.querySelector('#dashboard-usdc'));
+  
+  cards[0].element = totalCard;
+  cards[1].element = brlCard;
+  cards[2].element = usdtCard;
+  cards[3].element = usdcCard;
   
   // Separa cards com valor > 0 e valor = 0
   const cardsWithValue = cards.filter(c => c.value > 0).sort((a, b) => b.value - a.value);
