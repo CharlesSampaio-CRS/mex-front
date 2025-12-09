@@ -1447,35 +1447,25 @@ async function loadHistoryData(period = '7d') {
     const response = await api.getPortfolioEvolution(period);
     console.log('✅ Dados recebidos da API:', response);
     
-    // Transforma os dados da API no formato esperado
+    // Novo formato da API: { success, evolution: { data_points, summary } }
     const evolution = response.evolution || {};
-    const timestamps = evolution.timestamps || [];
-    const values_usd = evolution.values_usd || [];
-    const values_brl = evolution.values_brl || [];
-    
-    // Cria array de data_points no formato correto
-    const data_points = timestamps.map((timestamp, index) => ({
-      timestamp: timestamp,
-      total_usd: parseFloat(values_usd[index] || 0),
-      total_brl: parseFloat(values_brl[index] || 0)
-    }));
+    const data_points = evolution.data_points || [];
+    const summary = evolution.summary || {};
     
     console.log('📊 Data points processados:', data_points.length, 'pontos');
-    
-    // Cria objeto no formato esperado pelas funções de renderização
-    const formattedData = {
-      summary: evolution.summary || {},
-      data_points: data_points
-    };
+    console.log('📈 Summary:', summary);
     
     // Salva no appState para re-renderização
-    appState.historyData = formattedData;
+    appState.historyData = {
+      data_points,
+      summary
+    };
     
-    renderHistoryEvolution(formattedData);
+    renderHistoryEvolution({ data_points, summary });
     
     // Aguarda um momento para o DOM ser completamente renderizado
     setTimeout(() => {
-      drawHistoryChart(data_points);
+      drawHistoryChart(data_points, period);
     }, 500);
   } catch (error) {
     console.error('❌ Erro ao carregar histórico:', error);
@@ -1522,20 +1512,32 @@ function renderHistoryEvolution(evolution) {
     return;
   }
   
-  container.innerHTML = dataPoints.map(point => `
+  // Determina qual chave usar para o timestamp
+  const getTimeValue = (point) => {
+    if (point.timestamp) return point.timestamp;
+    if (point.date) return point.date;
+    if (point.month) return point.month;
+    return null;
+  };
+  
+  container.innerHTML = dataPoints.map(point => {
+    const timeValue = getTimeValue(point);
+    const formattedTime = timeValue ? formatDateTime(timeValue) : 'N/A';
+    
+    return `
     <div class="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg hover:bg-dark-700 transition-all">
-      <p class="text-sm text-dark-300">${formatDateTime(point.timestamp)}</p>
+      <p class="text-sm text-dark-300">${formattedTime}</p>
       <div class="text-right">
         <p class="font-semibold text-green-400">${formatCurrency(point.total_usd)}</p>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 // Função para desenhar o gráfico
 // Função para desenhar o gráfico com Chart.js
-function drawHistoryChart(dataPoints) {
-  console.log('🎨 Desenhando gráfico com', dataPoints?.length || 0, 'pontos');
+function drawHistoryChart(dataPoints, period) {
+  console.log('🎨 Desenhando gráfico com', dataPoints?.length || 0, 'pontos para período:', period);
   
   const canvas = document.getElementById('history-chart-canvas');
   if (!canvas) {
@@ -1568,15 +1570,42 @@ function drawHistoryChart(dataPoints) {
     return;
   }
   
-  // Prepara dados para o Chart.js
+  // Determina qual chave usar para o timestamp baseado no período
+  // 1d usa "timestamp", 7d-90d usam "date", 365d usa "month"
+  const getTimeValue = (point) => {
+    if (point.timestamp) return point.timestamp;
+    if (point.date) return point.date;
+    if (point.month) return point.month;
+    return null;
+  };
+  
+  // Prepara labels baseado no período
   const labels = dataPoints.map(point => {
-    const date = new Date(point.timestamp);
-    return date.toLocaleDateString('pt-BR', { 
-      day: '2-digit', 
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const timeValue = getTimeValue(point);
+    if (!timeValue) return '';
+    
+    const date = new Date(timeValue);
+    
+    // Formato diferente por período
+    if (period === '1d') {
+      // 24h: mostra hora:minuto
+      return date.toLocaleString('pt-BR', { 
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } else if (period === '1y') {
+      // 365d: mostra mês/ano
+      return date.toLocaleDateString('pt-BR', { 
+        month: 'short',
+        year: '2-digit'
+      });
+    } else {
+      // 7d, 30d, 90d: mostra dia/mês
+      return date.toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: '2-digit'
+      });
+    }
   });
   
   const isBRL = appState.showBRL;

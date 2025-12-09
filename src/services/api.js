@@ -171,7 +171,17 @@ class MultiExchangeAPI {
 
   // 11. Evolução do Portfolio
   async getPortfolioEvolution(period = '7d') {
-    const endpoint = `/api/v1/balances/history/evolution?user_id=${this.userId}&period=${period}`;
+    // Converte período para days
+    const daysMap = {
+      '1d': 1,
+      '7d': 7,
+      '30d': 30,
+      '90d': 90,
+      '1y': 365
+    };
+    const days = daysMap[period] || 7;
+    
+    const endpoint = `/api/v1/history/evolution?user_id=${this.userId}&days=${days}`;
     console.log('🌐 API Call:', endpoint);
     const result = await this.request(endpoint);
     console.log('🌐 API Response:', result);
