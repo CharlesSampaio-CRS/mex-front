@@ -121,7 +121,13 @@ const translations = {
     robotDesc: 'Configure estratégias automáticas de compra e venda',
     newStrategy: 'Nova Estratégia',
     strategyName: 'Nome da Estratégia',
-    activeStrategies: 'Estratégias Ativas'
+    activeStrategies: 'Estratégias Ativas',
+    searchToken: 'Buscar Token',
+    searchTokenPlaceholder: 'Buscar token por nome ou símbolo (ex: Bitcoin, BTC)...',
+    searchingTokens: 'Buscando tokens...',
+    noResultsFound: 'Nenhum resultado encontrado',
+    tokenNotFound: 'Token não encontrado',
+    selectToken: 'Selecione um token da lista'
   },
   en: {
     total: 'Total',
@@ -189,7 +195,13 @@ const translations = {
     robotDesc: 'Configure automatic buy and sell strategies',
     newStrategy: 'New Strategy',
     strategyName: 'Strategy Name',
-    activeStrategies: 'Active Strategies'
+    activeStrategies: 'Active Strategies',
+    searchToken: 'Search Token',
+    searchTokenPlaceholder: 'Search token by name or symbol (e.g., Bitcoin, BTC)...',
+    searchingTokens: 'Searching tokens...',
+    noResultsFound: 'No results found',
+    tokenNotFound: 'Token not found',
+    selectToken: 'Select a token from the list'
   }
 };
 
@@ -2765,6 +2777,91 @@ function setupEventListeners() {
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', handleSaveSettings);
   }
+  
+  // ==================== BUSCA DE TOKENS ====================
+  
+  const tokenSearchInput = document.getElementById('token-search-input');
+  const searchTokenBtn = document.getElementById('search-token-btn');
+  const clearSearchBtn = document.getElementById('clear-search-btn');
+  const tokenSuggestions = document.getElementById('token-suggestions');
+  
+  // Busca com debounce ao digitar
+  if (tokenSearchInput) {
+    const debouncedSearch = debounce(async (query) => {
+      if (query.length >= 2) {
+        clearSearchBtn.classList.remove('hidden');
+        clearSearchBtn.classList.add('flex');
+        
+        const results = await searchTokensAPI(query);
+        showTokenSuggestions(results);
+      } else {
+        clearSearchBtn.classList.add('hidden');
+        clearSearchBtn.classList.remove('flex');
+        tokenSuggestions.classList.add('hidden');
+      }
+    }, 500);
+    
+    tokenSearchInput.addEventListener('input', (e) => {
+      debouncedSearch(e.target.value.trim());
+    });
+    
+    // Enter para buscar
+    tokenSearchInput.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const query = tokenSearchInput.value.trim();
+        if (query.length >= 2) {
+          const results = await searchTokensAPI(query);
+          if (results.length > 0) {
+            showTokenSuggestions(results);
+          } else {
+            showNotification(t('noResultsFound'), 'error');
+          }
+        }
+      }
+    });
+  }
+  
+  // Botão de buscar
+  if (searchTokenBtn) {
+    searchTokenBtn.addEventListener('click', async () => {
+      const query = tokenSearchInput?.value.trim();
+      if (!query || query.length < 2) {
+        showNotification('Digite ao menos 2 caracteres', 'error');
+        return;
+      }
+      
+      const results = await searchTokensAPI(query);
+      if (results.length > 0) {
+        showTokenSuggestions(results);
+      } else {
+        showNotification(t('noResultsFound'), 'error');
+      }
+    });
+  }
+  
+  // Botão de limpar busca
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', () => {
+      if (tokenSearchInput) {
+        tokenSearchInput.value = '';
+        tokenSearchInput.focus();
+      }
+      clearSearchBtn.classList.add('hidden');
+      clearSearchBtn.classList.remove('flex');
+      tokenSuggestions.classList.add('hidden');
+    });
+  }
+  
+  // Fecha sugestões ao clicar fora
+  document.addEventListener('click', (e) => {
+    if (tokenSuggestions && 
+        !tokenSuggestions.contains(e.target) && 
+        !tokenSearchInput?.contains(e.target) &&
+        !searchTokenBtn?.contains(e.target)) {
+      tokenSuggestions.classList.add('hidden');
+    }
+  });
 }
 
 async function handleAddExchange(e) {
@@ -3144,6 +3241,292 @@ function updateLoadingMessage(message, progressPercent) {
   if (loadingProgress && progressPercent !== undefined) {
     loadingProgress.style.width = `${progressPercent}%`;
   }
+}
+
+// ==================== BUSCA DE TOKENS ====================
+
+// Cache para resultados de busca
+const tokenSearchCache = {
+  results: [],
+  timestamp: null,
+  query: ''
+};
+
+// Função para buscar tokens na CoinGecko API
+async function searchTokensAPI(query) {
+  if (!query || query.length < 2) return [];
+  
+  // Verifica cache (válido por 5 minutos)
+  const cacheAge = tokenSearchCache.timestamp ? Date.now() - tokenSearchCache.timestamp : Infinity;
+  if (tokenSearchCache.query === query && cacheAge < 300000) {
+    return tokenSearchCache.results;
+  }
+  
+  try {
+    const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error('API request failed');
+    
+    const data = await response.json();
+    const results = data.coins || [];
+    
+    // Atualiza cache
+    tokenSearchCache.results = results;
+    tokenSearchCache.timestamp = Date.now();
+    tokenSearchCache.query = query;
+    
+    return results;
+  } catch (error) {
+    console.error('❌ Erro ao buscar tokens:', error);
+    return [];
+  }
+}
+
+// Função para obter detalhes completos de um token
+async function getTokenDetails(coinId) {
+  try {
+    const response = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false`
+    );
+    if (!response.ok) throw new Error('API request failed');
+    
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Erro ao obter detalhes do token:', error);
+    return null;
+  }
+}
+
+// Função para mostrar sugestões de autocomplete
+function showTokenSuggestions(tokens) {
+  const suggestionsContainer = document.getElementById('token-suggestions');
+  
+  if (!tokens || tokens.length === 0) {
+    suggestionsContainer.classList.add('hidden');
+    return;
+  }
+  
+  // Limita a 10 sugestões
+  const topTokens = tokens.slice(0, 10);
+  
+  suggestionsContainer.innerHTML = topTokens.map(token => `
+    <div class="token-suggestion-item p-3 hover:bg-dark-600 cursor-pointer border-b border-dark-600 last:border-0 transition-colors"
+         data-coin-id="${token.id}"
+         data-symbol="${token.symbol}"
+         data-name="${token.name}">
+      <div class="flex items-center space-x-3">
+        ${token.thumb ? `<img src="${token.thumb}" alt="${token.name}" class="w-8 h-8 rounded-full">` : '<div class="w-8 h-8 rounded-full bg-dark-500 flex items-center justify-center text-xs">🪙</div>'}
+        <div class="flex-1">
+          <div class="font-semibold text-dark-100">${token.name}</div>
+          <div class="text-xs text-dark-400">${token.symbol.toUpperCase()} ${token.market_cap_rank ? `• #${token.market_cap_rank}` : ''}</div>
+        </div>
+        <div class="text-primary-400 text-xs">Ver detalhes →</div>
+      </div>
+    </div>
+  `).join('');
+  
+  suggestionsContainer.classList.remove('hidden');
+  
+  // Adiciona event listeners às sugestões
+  document.querySelectorAll('.token-suggestion-item').forEach(item => {
+    item.addEventListener('click', async function() {
+      const coinId = this.getAttribute('data-coin-id');
+      const symbol = this.getAttribute('data-symbol');
+      const name = this.getAttribute('data-name');
+      
+      suggestionsContainer.classList.add('hidden');
+      await showTokenDetailsModal(coinId, symbol, name);
+    });
+  });
+}
+
+// Função para mostrar modal com detalhes do token buscado
+async function showTokenDetailsModal(coinId, symbol, name) {
+  const loadingIndicator = document.getElementById('token-search-loading');
+  
+  try {
+    loadingIndicator.classList.remove('hidden');
+    
+    const tokenData = await getTokenDetails(coinId);
+    
+    if (!tokenData) {
+      alert(t('tokenNotFound'));
+      return;
+    }
+    
+    // Prepara dados no formato do modal existente
+    const tokenInfo = {
+      symbol: symbol.toUpperCase(),
+      name: name,
+      current_price: tokenData.market_data?.current_price?.usd || 0,
+      price_change_percentage_1h: tokenData.market_data?.price_change_percentage_1h_in_currency?.usd || 0,
+      price_change_percentage_24h: tokenData.market_data?.price_change_percentage_24h || 0,
+      price_change_percentage_7d: tokenData.market_data?.price_change_percentage_7d || 0,
+      price_change_percentage_30d: tokenData.market_data?.price_change_percentage_30d || 0,
+      market_cap: tokenData.market_data?.market_cap?.usd || 0,
+      total_volume: tokenData.market_data?.total_volume?.usd || 0,
+      circulating_supply: tokenData.market_data?.circulating_supply || 0,
+      total_supply: tokenData.market_data?.total_supply || 0,
+      max_supply: tokenData.market_data?.max_supply || 0,
+      ath: tokenData.market_data?.ath?.usd || 0,
+      atl: tokenData.market_data?.atl?.usd || 0,
+      image: tokenData.image?.large || tokenData.image?.small || '',
+      description: tokenData.description?.en || tokenData.description?.pt || ''
+    };
+    
+    // Reutiliza a função de modal existente com adaptação
+    showSearchedTokenModal(tokenInfo);
+    
+  } catch (error) {
+    console.error('❌ Erro ao mostrar detalhes do token:', error);
+    alert('Erro ao carregar detalhes do token');
+  } finally {
+    loadingIndicator.classList.add('hidden');
+  }
+}
+
+// Modal adaptado para tokens buscados (sem exchange/amount)
+function showSearchedTokenModal(tokenInfo) {
+  const existingModal = document.getElementById('token-modal');
+  if (existingModal) existingModal.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'token-modal';
+  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in';
+  
+  const formatVariation = (value) => {
+    if (value === null || value === undefined || value === 0) return '<span class="text-dark-400">—</span>';
+    const color = value >= 0 ? 'text-green-400' : 'text-red-400';
+    const symbol = value >= 0 ? '▲' : '▼';
+    return `<span class="${color}">${symbol} ${Math.abs(value).toFixed(2)}%</span>`;
+  };
+  
+  const formatLargeNumber = (num) => {
+    if (!num) return '—';
+    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+    if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
+    return `$${num.toFixed(2)}`;
+  };
+  
+  const contentHTML = `
+    <div class="bg-dark-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin border border-dark-700 shadow-2xl">
+      <!-- Header -->
+      <div class="sticky top-0 bg-gradient-to-r from-dark-800 to-dark-700 border-b border-dark-600 p-6 flex items-center justify-between z-10">
+        <div class="flex items-center space-x-4">
+          ${tokenInfo.image ? `<img src="${tokenInfo.image}" alt="${tokenInfo.symbol}" class="w-16 h-16 rounded-full border-2 border-primary-500">` : '<div class="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center text-2xl">🪙</div>'}
+          <div>
+            <h2 class="text-2xl font-bold text-dark-100">${tokenInfo.name}</h2>
+            <p class="text-dark-400">${tokenInfo.symbol}</p>
+          </div>
+        </div>
+        <button class="close-modal-btn text-dark-400 hover:text-dark-100 transition-colors text-3xl leading-none">&times;</button>
+      </div>
+      
+      <!-- Content -->
+      <div class="p-6 space-y-6">
+        <!-- Preço Atual -->
+        <div class="bg-dark-700/50 rounded-xl p-4 text-center">
+          <p class="text-dark-400 text-sm mb-1">Preço Atual</p>
+          <p class="text-3xl font-bold text-green-400">${formatCurrency(tokenInfo.current_price)}</p>
+        </div>
+        
+        <!-- Variações -->
+        <div>
+          <h3 class="text-lg font-semibold text-dark-200 mb-3">📊 Variações de Preço</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-dark-700/30 rounded-lg p-3">
+              <p class="text-xs text-dark-400 mb-1">1 hora</p>
+              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_1h)}</p>
+            </div>
+            <div class="bg-dark-700/30 rounded-lg p-3">
+              <p class="text-xs text-dark-400 mb-1">24 horas</p>
+              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_24h)}</p>
+            </div>
+            <div class="bg-dark-700/30 rounded-lg p-3">
+              <p class="text-xs text-dark-400 mb-1">7 dias</p>
+              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_7d)}</p>
+            </div>
+            <div class="bg-dark-700/30 rounded-lg p-3">
+              <p class="text-xs text-dark-400 mb-1">30 dias</p>
+              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_30d)}</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Dados de Mercado -->
+        <div>
+          <h3 class="text-lg font-semibold text-dark-200 mb-3">💹 Dados de Mercado</h3>
+          <div class="space-y-2 bg-dark-700/30 rounded-lg p-4">
+            <div class="flex justify-between">
+              <span class="text-dark-400">Market Cap:</span>
+              <span class="text-dark-100 font-semibold">${formatLargeNumber(tokenInfo.market_cap)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-dark-400">Volume 24h:</span>
+              <span class="text-dark-100 font-semibold">${formatLargeNumber(tokenInfo.total_volume)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-dark-400">Supply Circulante:</span>
+              <span class="text-dark-100 font-semibold">${tokenInfo.circulating_supply ? formatNumber(tokenInfo.circulating_supply) : '—'}</span>
+            </div>
+            ${tokenInfo.max_supply ? `
+              <div class="flex justify-between">
+                <span class="text-dark-400">Supply Máximo:</span>
+                <span class="text-dark-100 font-semibold">${formatNumber(tokenInfo.max_supply)}</span>
+              </div>
+            ` : ''}
+            <div class="flex justify-between pt-2 border-t border-dark-600">
+              <span class="text-dark-400">ATH (Máxima):</span>
+              <span class="text-green-400 font-semibold">${formatCurrency(tokenInfo.ath)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-dark-400">ATL (Mínima):</span>
+              <span class="text-red-400 font-semibold">${formatCurrency(tokenInfo.atl)}</span>
+            </div>
+          </div>
+        </div>
+        
+        ${tokenInfo.description ? `
+          <div>
+            <h3 class="text-lg font-semibold text-dark-200 mb-3">ℹ️ Sobre</h3>
+            <div class="bg-dark-700/30 rounded-lg p-4 text-dark-300 text-sm max-h-40 overflow-y-auto scrollbar-thin">
+              ${tokenInfo.description.substring(0, 500)}${tokenInfo.description.length > 500 ? '...' : ''}
+            </div>
+          </div>
+        ` : ''}
+        
+        <div class="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
+          <p class="text-xs text-primary-300 text-center">
+            💡 Dados fornecidos pela CoinGecko API
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  modal.innerHTML = contentHTML;
+  document.body.appendChild(modal);
+  
+  // Event listeners para fechar
+  modal.querySelectorAll('.close-modal-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.classList.add('animate-fade-out');
+      setTimeout(() => modal.remove(), 200);
+    });
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('animate-fade-out');
+      setTimeout(() => modal.remove(), 200);
+    }
+  });
+  
+  document.addEventListener('keydown', function closeOnKey(e) {
+    modal.classList.add('animate-fade-out');
+    setTimeout(() => modal.remove(), 200);
+    document.removeEventListener('keydown', closeOnKey);
+  });
 }
 
 
