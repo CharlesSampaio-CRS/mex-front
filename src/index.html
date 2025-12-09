@@ -102,12 +102,50 @@
       
       <!-- Dashboard View -->
       <div id="dashboard-view" class="view">
+        
+        <!-- Barra de Busca de Tokens - Compacta -->
+        <div class="bg-dark-800 border border-dark-700 rounded-lg p-3 mb-4">
+          <div class="flex items-center gap-2">
+            <div class="flex-1 relative">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                <span class="text-dark-400 text-sm">🔍</span>
+              </div>
+              <input 
+                type="text" 
+                id="token-search-input" 
+                class="w-full bg-dark-700 border border-dark-600 rounded-lg pl-9 pr-8 py-2 text-sm text-dark-100 placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" 
+                placeholder="Buscar token (ex: Bitcoin, BTC)..."
+                autocomplete="off"
+              >
+              <button 
+                id="clear-search-btn" 
+                class="absolute inset-y-0 right-2 hidden items-center px-1.5 text-dark-400 hover:text-dark-200 transition-colors text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <button id="search-token-btn" class="btn-primary text-sm px-4 py-2 whitespace-nowrap">
+              Buscar
+            </button>
+          </div>
+          
+          <!-- Sugestões de Autocomplete -->
+          <div id="token-suggestions" class="hidden mt-2 bg-dark-700 border border-dark-600 rounded-lg max-h-60 overflow-y-auto scrollbar-thin">
+            <!-- Preenchido dinamicamente -->
+          </div>
+          
+          <!-- Loading indicator -->
+          <div id="token-search-loading" class="hidden mt-2 text-center">
+            <span class="text-primary-400 animate-pulse text-sm">🔄 Buscando...</span>
+          </div>
+        </div>
+        
         <!-- Cards: Balance Total + Moedas Fiduciárias -->
         <div class="mb-6 flex gap-2 max-w-2xl">
           <!-- Card: Total Portfolio -->
           <div class="flex-1 p-2 bg-dark-800 border border-primary-500/30 rounded-lg hover:border-primary-500/50 transition-all cursor-pointer animate-fade-in">
             <div class="flex items-center justify-center mb-1">
-              <span class="text-xl">💰</span>
+              <span class="text-xl">�</span>
             </div>
             <p class="text-[10px] text-dark-400 text-center mb-1 uppercase">Total</p>
             <p class="text-sm font-bold text-green-400 text-center truncate" id="dashboard-total">$0.00</p>
@@ -116,7 +154,7 @@
           <!-- Card: BRL -->
           <div class="flex-1 p-2 bg-dark-800 border border-blue-500/30 rounded-lg hover:border-blue-500/50 transition-all animate-fade-in bg-gradient-to-br from-blue-900/10 to-transparent">
             <div class="flex items-center justify-center mb-1">
-              <span class="text-xl">🔰</span>
+              <span class="text-xl">�</span>
             </div>
             <p class="text-[10px] text-blue-400 text-center mb-1 uppercase">BRL (Disponível)</p>
             <p class="text-sm font-bold text-blue-400 text-center truncate" id="dashboard-brl">R$ 0,00</p>
@@ -125,7 +163,7 @@
           <!-- Card: USDT -->
           <div class="flex-1 p-2 bg-dark-800 border border-emerald-500/30 rounded-lg hover:border-emerald-500/50 transition-all animate-fade-in bg-gradient-to-br from-emerald-900/10 to-transparent">
             <div class="flex items-center justify-center mb-1">
-              <span class="text-xl">🔷</span>
+              <span class="text-xl">�</span>
             </div>
             <p class="text-[10px] text-emerald-400 text-center mb-1 uppercase">USDT (Disponível)</p>
             <p class="text-sm font-bold text-emerald-400 text-center truncate" id="dashboard-usdt">0.00</p>
@@ -134,47 +172,10 @@
           <!-- Card: USDC -->
           <div class="flex-1 p-2 bg-dark-800 border border-cyan-500/30 rounded-lg hover:border-cyan-500/50 transition-all animate-fade-in bg-gradient-to-br from-cyan-900/10 to-transparent">
             <div class="flex items-center justify-center mb-1">
-              <span class="text-xl">💎</span>
+              <span class="text-xl">�</span>
             </div>
             <p class="text-[10px] text-cyan-400 text-center mb-1 uppercase">USDC (Disponível)</p>
             <p class="text-sm font-bold text-cyan-400 text-center truncate" id="dashboard-usdc">0.00</p>
-          </div>
-        </div>
-
-        <!-- Barra de Busca de Tokens -->
-        <div class="card mb-6">
-          <div class="flex items-center space-x-4">
-            <div class="flex-1 relative">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <span class="text-dark-400">🔍</span>
-              </div>
-              <input 
-                type="text" 
-                id="token-search-input" 
-                class="input pl-10 pr-20" 
-                placeholder="Buscar token por nome ou símbolo (ex: Bitcoin, BTC)..."
-                autocomplete="off"
-              >
-              <button 
-                id="clear-search-btn" 
-                class="absolute inset-y-0 right-2 hidden items-center px-2 text-dark-400 hover:text-dark-200 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <button id="search-token-btn" class="btn-primary whitespace-nowrap">
-              Buscar Token
-            </button>
-          </div>
-          
-          <!-- Sugestões de Autocomplete -->
-          <div id="token-suggestions" class="hidden mt-2 bg-dark-700 border border-dark-600 rounded-lg max-h-64 overflow-y-auto scrollbar-thin">
-            <!-- Preenchido dinamicamente -->
-          </div>
-          
-          <!-- Loading indicator -->
-          <div id="token-search-loading" class="hidden mt-3 text-center">
-            <span class="text-primary-400 animate-pulse">🔄 Buscando tokens...</span>
           </div>
         </div>
 

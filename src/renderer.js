@@ -3305,21 +3305,21 @@ function showTokenSuggestions(tokens) {
     return;
   }
   
-  // Limita a 10 sugestões
-  const topTokens = tokens.slice(0, 10);
+  // Limita a 8 sugestões para não ficar muito grande
+  const topTokens = tokens.slice(0, 8);
   
   suggestionsContainer.innerHTML = topTokens.map(token => `
-    <div class="token-suggestion-item p-3 hover:bg-dark-600 cursor-pointer border-b border-dark-600 last:border-0 transition-colors"
+    <div class="token-suggestion-item p-2 hover:bg-dark-600 cursor-pointer border-b border-dark-600 last:border-0 transition-colors"
          data-coin-id="${token.id}"
          data-symbol="${token.symbol}"
          data-name="${token.name}">
-      <div class="flex items-center space-x-3">
-        ${token.thumb ? `<img src="${token.thumb}" alt="${token.name}" class="w-8 h-8 rounded-full">` : '<div class="w-8 h-8 rounded-full bg-dark-500 flex items-center justify-center text-xs">🪙</div>'}
-        <div class="flex-1">
-          <div class="font-semibold text-dark-100">${token.name}</div>
+      <div class="flex items-center gap-2">
+        ${token.thumb ? `<img src="${token.thumb}" alt="${token.name}" class="w-7 h-7 rounded-full">` : '<div class="w-7 h-7 rounded-full bg-dark-500 flex items-center justify-center text-xs">🪙</div>'}
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-dark-100 text-sm truncate">${token.name}</div>
           <div class="text-xs text-dark-400">${token.symbol.toUpperCase()} ${token.market_cap_rank ? `• #${token.market_cap_rank}` : ''}</div>
         </div>
-        <div class="text-primary-400 text-xs">Ver detalhes →</div>
+        <div class="text-primary-400 text-xs whitespace-nowrap">Ver →</div>
       </div>
     </div>
   `).join('');
@@ -3409,96 +3409,69 @@ function showSearchedTokenModal(tokenInfo) {
   };
   
   const contentHTML = `
-    <div class="bg-dark-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin border border-dark-700 shadow-2xl">
-      <!-- Header -->
-      <div class="sticky top-0 bg-gradient-to-r from-dark-800 to-dark-700 border-b border-dark-600 p-6 flex items-center justify-between z-10">
-        <div class="flex items-center space-x-4">
-          ${tokenInfo.image ? `<img src="${tokenInfo.image}" alt="${tokenInfo.symbol}" class="w-16 h-16 rounded-full border-2 border-primary-500">` : '<div class="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center text-2xl">🪙</div>'}
+    <div class="bg-dark-800 rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto scrollbar-thin border border-dark-700 shadow-2xl">
+      <!-- Header compacto -->
+      <div class="sticky top-0 bg-gradient-to-r from-dark-800 to-dark-700 border-b border-dark-600 p-3 flex items-center justify-between z-10">
+        <div class="flex items-center gap-2.5">
+          ${tokenInfo.image ? `<img src="${tokenInfo.image}" alt="${tokenInfo.symbol}" class="w-10 h-10 rounded-full border-2 border-primary-500">` : '<div class="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-lg">🪙</div>'}
           <div>
-            <h2 class="text-2xl font-bold text-dark-100">${tokenInfo.name}</h2>
-            <p class="text-dark-400">${tokenInfo.symbol}</p>
+            <h2 class="text-lg font-bold text-dark-100">${tokenInfo.name}</h2>
+            <p class="text-xs text-dark-400">${tokenInfo.symbol}</p>
           </div>
         </div>
-        <button class="close-modal-btn text-dark-400 hover:text-dark-100 transition-colors text-3xl leading-none">&times;</button>
+        <button class="close-modal-btn text-dark-400 hover:text-dark-100 transition-colors text-2xl leading-none">&times;</button>
       </div>
       
-      <!-- Content -->
-      <div class="p-6 space-y-6">
+      <!-- Content compacto -->
+      <div class="p-3 space-y-3">
         <!-- Preço Atual -->
-        <div class="bg-dark-700/50 rounded-xl p-4 text-center">
-          <p class="text-dark-400 text-sm mb-1">Preço Atual</p>
-          <p class="text-3xl font-bold text-green-400">${formatCurrency(tokenInfo.current_price)}</p>
+        <div class="bg-dark-700/50 rounded-lg p-2.5 text-center">
+          <p class="text-dark-400 text-xs mb-0.5">Preço Atual</p>
+          <p class="text-xl font-bold text-green-400">${formatCurrency(tokenInfo.current_price)}</p>
         </div>
         
-        <!-- Variações -->
-        <div>
-          <h3 class="text-lg font-semibold text-dark-200 mb-3">📊 Variações de Preço</h3>
-          <div class="grid grid-cols-2 gap-3">
-            <div class="bg-dark-700/30 rounded-lg p-3">
-              <p class="text-xs text-dark-400 mb-1">1 hora</p>
-              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_1h)}</p>
-            </div>
-            <div class="bg-dark-700/30 rounded-lg p-3">
-              <p class="text-xs text-dark-400 mb-1">24 horas</p>
-              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_24h)}</p>
-            </div>
-            <div class="bg-dark-700/30 rounded-lg p-3">
-              <p class="text-xs text-dark-400 mb-1">7 dias</p>
-              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_7d)}</p>
-            </div>
-            <div class="bg-dark-700/30 rounded-lg p-3">
-              <p class="text-xs text-dark-400 mb-1">30 dias</p>
-              <p class="text-lg font-semibold">${formatVariation(tokenInfo.price_change_percentage_30d)}</p>
-            </div>
+        <!-- Variações 2x2 -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-dark-700/30 rounded-lg p-2">
+            <p class="text-xs text-dark-400 mb-0.5">1h</p>
+            <p class="text-sm font-semibold">${formatVariation(tokenInfo.price_change_percentage_1h)}</p>
+          </div>
+          <div class="bg-dark-700/30 rounded-lg p-2">
+            <p class="text-xs text-dark-400 mb-0.5">24h</p>
+            <p class="text-sm font-semibold">${formatVariation(tokenInfo.price_change_percentage_24h)}</p>
+          </div>
+          <div class="bg-dark-700/30 rounded-lg p-2">
+            <p class="text-xs text-dark-400 mb-0.5">7d</p>
+            <p class="text-sm font-semibold">${formatVariation(tokenInfo.price_change_percentage_7d)}</p>
+          </div>
+          <div class="bg-dark-700/30 rounded-lg p-2">
+            <p class="text-xs text-dark-400 mb-0.5">30d</p>
+            <p class="text-sm font-semibold">${formatVariation(tokenInfo.price_change_percentage_30d)}</p>
           </div>
         </div>
         
         <!-- Dados de Mercado -->
-        <div>
-          <h3 class="text-lg font-semibold text-dark-200 mb-3">💹 Dados de Mercado</h3>
-          <div class="space-y-2 bg-dark-700/30 rounded-lg p-4">
-            <div class="flex justify-between">
-              <span class="text-dark-400">Market Cap:</span>
-              <span class="text-dark-100 font-semibold">${formatLargeNumber(tokenInfo.market_cap)}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-dark-400">Volume 24h:</span>
-              <span class="text-dark-100 font-semibold">${formatLargeNumber(tokenInfo.total_volume)}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-dark-400">Supply Circulante:</span>
-              <span class="text-dark-100 font-semibold">${tokenInfo.circulating_supply ? formatNumber(tokenInfo.circulating_supply) : '—'}</span>
-            </div>
-            ${tokenInfo.max_supply ? `
-              <div class="flex justify-between">
-                <span class="text-dark-400">Supply Máximo:</span>
-                <span class="text-dark-100 font-semibold">${formatNumber(tokenInfo.max_supply)}</span>
-              </div>
-            ` : ''}
-            <div class="flex justify-between pt-2 border-t border-dark-600">
-              <span class="text-dark-400">ATH (Máxima):</span>
-              <span class="text-green-400 font-semibold">${formatCurrency(tokenInfo.ath)}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-dark-400">ATL (Mínima):</span>
-              <span class="text-red-400 font-semibold">${formatCurrency(tokenInfo.atl)}</span>
-            </div>
+        <div class="space-y-1.5 bg-dark-700/30 rounded-lg p-2.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-dark-400">Market Cap:</span>
+            <span class="text-dark-100 font-semibold">${formatLargeNumber(tokenInfo.market_cap)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-dark-400">Volume 24h:</span>
+            <span class="text-dark-100 font-semibold">${formatLargeNumber(tokenInfo.total_volume)}</span>
+          </div>
+          <div class="flex justify-between pt-1 border-t border-dark-600">
+            <span class="text-dark-400">ATH:</span>
+            <span class="text-green-400 font-semibold">${formatCurrency(tokenInfo.ath)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-dark-400">ATL:</span>
+            <span class="text-red-400 font-semibold">${formatCurrency(tokenInfo.atl)}</span>
           </div>
         </div>
         
-        ${tokenInfo.description ? `
-          <div>
-            <h3 class="text-lg font-semibold text-dark-200 mb-3">ℹ️ Sobre</h3>
-            <div class="bg-dark-700/30 rounded-lg p-4 text-dark-300 text-sm max-h-40 overflow-y-auto scrollbar-thin">
-              ${tokenInfo.description.substring(0, 500)}${tokenInfo.description.length > 500 ? '...' : ''}
-            </div>
-          </div>
-        ` : ''}
-        
-        <div class="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
-          <p class="text-xs text-primary-300 text-center">
-            💡 Dados fornecidos pela CoinGecko API
-          </p>
+        <div class="bg-primary-500/10 border border-primary-500/30 rounded-lg p-2 text-center">
+          <p class="text-xs text-primary-300">💡 CoinGecko API</p>
         </div>
       </div>
     </div>
