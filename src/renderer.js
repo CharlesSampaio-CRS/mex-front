@@ -1340,6 +1340,25 @@ function renderBalances(balances) {
   );
   
   container.innerHTML = sortedExchanges.map(ex => renderExchangeBalance(ex)).join('');
+  
+  // Adiciona event listeners para cliques nos tokens
+  attachTokenClickListeners();
+}
+
+// Função para adicionar event listeners nas linhas de tokens
+function attachTokenClickListeners() {
+  const tokenRows = document.querySelectorAll('.token-row');
+  tokenRows.forEach(row => {
+    row.addEventListener('click', (e) => {
+      const tokenData = JSON.parse(row.getAttribute('data-token'));
+      const exchangeId = row.getAttribute('data-exchange-id');
+      const exchangeName = row.getAttribute('data-exchange-name');
+      const symbol = row.getAttribute('data-symbol');
+      
+      console.log('🔍 Token clicado:', symbol, 'Exchange:', exchangeName);
+      showTokenModal(symbol, tokenData, exchangeId, exchangeName);
+    });
+  });
 }
 
 function renderExchangeBalance(exchange) {
@@ -1394,8 +1413,19 @@ function renderExchangeBalance(exchange) {
               ${displayTokens.map(([symbol, token]) => {
                 const isMainToken = token.value_usd > 10; // Destaque para tokens > $10
                 const hasValue = token.value_usd > 0;
+                const tokenDataJson = JSON.stringify({
+                  symbol,
+                  amount: token.amount,
+                  price_usd: token.price_usd,
+                  value_usd: token.value_usd,
+                  ticker: token.ticker || null
+                });
                 return `
-                  <tr class="border-b border-dark-700/50 hover:bg-dark-700/30 transition-colors">
+                  <tr class="border-b border-dark-700/50 hover:bg-primary-900/20 transition-colors cursor-pointer token-row"
+                      data-token='${tokenDataJson.replace(/'/g, "&apos;")}'
+                      data-exchange-id="${exchange.exchange_id}"
+                      data-exchange-name="${exchange.name}"
+                      data-symbol="${symbol}">
                     <td class="py-3 pr-4">
                       <div class="flex items-center gap-2">
                         ${isMainToken ? '<span class="text-yellow-400">⭐</span>' : ''}
