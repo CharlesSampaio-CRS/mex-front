@@ -337,10 +337,20 @@
         </div>
 
         <!-- Chart Container -->
-        <div class="card mb-6" style="min-height: 500px;">
-          <h3 class="text-lg font-bold text-dark-100 mb-4">Evolução do Portfolio</h3>
-          <div style="width: 800px; height: 400px; position: relative; background-color: rgba(59, 130, 246, 0.05); border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 8px; margin: 0 auto;">
-            <canvas id="history-chart-canvas" width="800" height="400" style="display: block; width: 800px !important; height: 400px !important;"></canvas>
+        <div class="card mb-6" style="min-height: 500px; background: linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.9) 100%); border: 1px solid rgba(75, 85, 99, 0.3); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              <span class="text-2xl">📈</span>
+              <span data-i18n="history-chart-title">Evolução do Portfolio</span>
+            </h3>
+            <div class="flex gap-2">
+              <span class="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg">
+                Live
+              </span>
+            </div>
+          </div>
+          <div style="width: 100%; max-width: 900px; height: 450px; position: relative; background: linear-gradient(180deg, rgba(31, 41, 55, 0.4) 0%, rgba(17, 24, 39, 0.6) 100%); border: 1px solid rgba(75, 85, 99, 0.4); border-radius: 12px; margin: 0 auto; padding: 20px; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);">
+            <canvas id="history-chart-canvas" width="860" height="410" style="display: block; width: 860px !important; height: 410px !important;"></canvas>
           </div>
         </div>
 

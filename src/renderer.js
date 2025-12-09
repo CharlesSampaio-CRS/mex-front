@@ -49,6 +49,7 @@ const translations = {
     availableExchanges: 'Corretoras Disponíveis',
     tokenList: 'Lista de Tokens',
     priceHistory: 'Histórico de Preços',
+    historyChartTitle: 'Evolução do Portfolio',
     
     // Botões
     refresh: 'Atualizar',
@@ -117,6 +118,7 @@ const translations = {
     availableExchanges: 'Available Exchanges',
     tokenList: 'Token List',
     priceHistory: 'Price History',
+    historyChartTitle: 'Portfolio Evolution',
     
     // Botões
     refresh: 'Refresh',
@@ -1631,54 +1633,121 @@ function drawHistoryChart(dataPoints, period) {
     return Number.isNaN(usdValue) ? 0 : usdValue;
   });
   
+  // Calcula variação para determinar a cor (verde = positivo, vermelho = negativo)
+  const firstValue = values[0] || 0;
+  const lastValue = values[values.length - 1] || 0;
+  const isPositive = lastValue >= firstValue;
+  
+  // Cores dinâmicas baseadas na performance
+  const lineColor = isPositive ? '#10B981' : '#EF4444'; // verde ou vermelho
+  const gradientColorStart = isPositive ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+  const gradientColorEnd = isPositive ? 'rgba(16, 185, 129, 0.0)' : 'rgba(239, 68, 68, 0.0)';
+  
+  // Cria gradiente para o preenchimento
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, gradientColorStart);
+  gradient.addColorStop(1, gradientColorEnd);
+  
   // Cria o gráfico
   appState.historyChart = new Chart(canvas, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-  label: isBRL ? 'Portfolio (BRL)' : 'Portfolio (USD)',
+        label: isBRL ? '💰 Portfolio (BRL)' : '💵 Portfolio (USD)',
         data: values,
-        borderColor: '#3B82F6',
-        backgroundColor: chartState.showArea ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+        borderColor: lineColor,
+        backgroundColor: chartState.showArea ? gradient : 'transparent',
         borderWidth: 3,
         fill: chartState.showArea,
         tension: 0.4,
-        pointRadius: chartState.showPoints ? 6 : 0,
-        pointBackgroundColor: '#3B82F6',
-        pointBorderColor: '#1E3A8A',
+        pointRadius: chartState.showPoints ? 4 : 0,
+        pointBackgroundColor: lineColor,
+        pointBorderColor: '#FFFFFF',
         pointBorderWidth: 2,
         pointHoverRadius: 8,
-        pointHoverBackgroundColor: '#60A5FA',
-        pointHoverBorderColor: '#1E3A8A',
-        pointHoverBorderWidth: 3
+        pointHoverBackgroundColor: lineColor,
+        pointHoverBorderColor: '#FFFFFF',
+        pointHoverBorderWidth: 3,
+        segment: {
+          borderColor: ctx => {
+            // Cor dinâmica por segmento baseado na direção
+            const prev = ctx.p0.parsed.y;
+            const curr = ctx.p1.parsed.y;
+            return curr >= prev ? '#10B981' : '#EF4444';
+          }
+        }
       }]
     },
     options: {
       responsive: false,
       maintainAspectRatio: false,
+      animation: {
+        duration: 750,
+        easing: 'easeInOutQuart'
+      },
       plugins: {
         legend: {
           display: true,
+          position: 'top',
+          align: 'start',
           labels: {
-            color: '#F3F4F6',
+            color: '#E5E7EB',
             font: {
               size: 14,
-              weight: 'bold'
-            }
+              weight: '600',
+              family: "'Inter', 'Segoe UI', sans-serif"
+            },
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle'
           }
         },
         tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.9)',
-          titleColor: '#F3F4F6',
-          bodyColor: '#F3F4F6',
-          borderColor: '#3B82F6',
-          borderWidth: 1,
-          padding: 12,
-          displayColors: false,
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: '#F9FAFB',
+          bodyColor: '#E5E7EB',
+          borderColor: lineColor,
+          borderWidth: 2,
+          padding: 16,
+          displayColors: true,
+          boxPadding: 6,
+          usePointStyle: true,
+          titleFont: {
+            size: 13,
+            weight: '600',
+            family: "'Inter', 'Segoe UI', sans-serif"
+          },
+          bodyFont: {
+            size: 14,
+            weight: '700',
+            family: "'Inter', 'Segoe UI', sans-serif"
+          },
           callbacks: {
+            title: function(context) {
+              return context[0].label;
+            },
             label: function(context) {
-              return `${symbol}${context.parsed.y.toFixed(2)}`;
+              const value = context.parsed.y;
+              return `${symbol} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            },
+            afterLabel: function(context) {
+              // Mostra a variação em relação ao ponto anterior
+              const currentIndex = context.dataIndex;
+              if (currentIndex > 0) {
+                const currentValue = context.parsed.y;
+                const previousValue = context.dataset.data[currentIndex - 1];
+                const change = currentValue - previousValue;
+                const changePercent = ((change / previousValue) * 100).toFixed(2);
+                const changeSymbol = change >= 0 ? '▲' : '▼';
+                const changeColor = change >= 0 ? '🟢' : '🔴';
+                return `${changeColor} ${changeSymbol} ${changePercent}%`;
+              }
+              return '';
             }
           }
         }
@@ -1687,23 +1756,47 @@ function drawHistoryChart(dataPoints, period) {
         x: {
           grid: {
             display: chartState.showGrid,
-            color: 'rgba(55, 65, 81, 0.5)'
+            color: 'rgba(75, 85, 99, 0.3)',
+            drawBorder: false,
+            lineWidth: 1
+          },
+          border: {
+            display: false
           },
           ticks: {
             color: '#9CA3AF',
+            font: {
+              size: 11,
+              weight: '500',
+              family: "'Inter', 'Segoe UI', sans-serif"
+            },
             maxRotation: 45,
-            minRotation: 45
+            minRotation: 45,
+            padding: 8,
+            autoSkip: true,
+            maxTicksLimit: period === '1d' ? 12 : period === '7d' ? 7 : 10
           }
         },
         y: {
           grid: {
             display: chartState.showGrid,
-            color: 'rgba(55, 65, 81, 0.5)'
+            color: 'rgba(75, 85, 99, 0.3)',
+            drawBorder: false,
+            lineWidth: 1
+          },
+          border: {
+            display: false
           },
           ticks: {
             color: '#9CA3AF',
+            font: {
+              size: 12,
+              weight: '600',
+              family: "'Inter', 'Segoe UI', sans-serif"
+            },
+            padding: 12,
             callback: function(value) {
-              return `${symbol}${value.toFixed(2)}`;
+              return `${symbol} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
             }
           }
         }
