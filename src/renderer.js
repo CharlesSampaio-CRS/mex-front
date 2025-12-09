@@ -736,7 +736,7 @@ function showTokenModalWithLoading(symbol, tokenData, exchangeName) {
   
   const modalHTML = `
     <div id="token-modal" class="modal-overlay animate-fade-in">
-      <div class="modal-content animate-scale-in max-h-[90vh] overflow-hidden">
+      <div class="modal-content animate-scale-in max-h-[90vh] overflow-hidden" style="min-height: 700px;">
         <!-- Header -->
         <div class="relative p-4 border-b border-primary-500/30 bg-gradient-to-r from-primary-900/20 via-dark-800 to-dark-900">
           <div class="flex-1 text-center">
@@ -750,10 +750,43 @@ function showTokenModalWithLoading(symbol, tokenData, exchangeName) {
         </div>
         
         <!-- Loading Content -->
-        <div id="modal-content" class="p-8 flex flex-col items-center justify-center min-h-[300px]">
-          <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-500/30 border-t-primary-500 mb-4"></div>
-          <p class="text-dark-300 text-lg font-semibold">Carregando dados do token...</p>
-          <p class="text-dark-500 text-sm mt-2">Buscando informações em tempo real</p>
+        <div id="modal-content" class="flex flex-col items-center justify-center" style="height: 600px;">
+          <!-- Spinner Principal de Loading (versão menor) -->
+          <div class="relative">
+            <!-- Círculo externo pulsante -->
+            <div class="w-24 h-24 mx-auto rounded-full border-4 border-primary-500/20" 
+                 style="animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
+            
+            <!-- Spinner principal girando suavemente -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-full border-3 border-transparent border-t-primary-500 border-r-primary-400" 
+                   style="animation: spin-smooth 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+            </div>
+            
+            <!-- Spinner do meio -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-16 h-16 rounded-full border-3 border-transparent border-r-primary-500 border-b-primary-400" 
+                   style="animation: spin-smooth 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+            </div>
+            
+            <!-- Spinner interno menor -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-12 h-12 rounded-full border-2 border-transparent border-b-primary-600 border-l-primary-500" 
+                   style="animation: spin-smooth 2s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse;"></div>
+            </div>
+            
+            <!-- Spinner mais interno -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-8 h-8 rounded-full border-2 border-transparent border-t-primary-600 border-r-primary-700" 
+                   style="animation: spin-smooth 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
+            </div>
+            
+            <!-- Centro com ponto brilhante -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-2 h-2 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 shadow-lg shadow-primary-500/50"
+                   style="animation: pulse-ring 1s ease-in-out infinite;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
