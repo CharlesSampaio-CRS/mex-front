@@ -1,7 +1,5 @@
 // Renderer Process - Interface integrada com a API Multi-Exchange
 
-console.log('Renderer process started');
-
 // Estado global da aplicação
 const appState = {
   linkedExchanges: [],
@@ -22,7 +20,8 @@ const appState = {
   darkMode: true, // Dark mode ativado por padrão
   expandedExchanges: new Set(),
   activeTokenModal: null,
-  exchangeDetailsCache: {}
+  exchangeDetailsCache: {},
+  robotStrategies: [] // Estratégias de automação
 };
 
 // Lista de moedas fiduciárias e stablecoins
@@ -40,6 +39,7 @@ const translations = {
     settings: 'Configurações',
     loading: 'Carregando informações...',
     home: 'Início',
+    robot: 'Robot',
     
     // Cards Dashboard
     totalPortfolio: 'Total',
@@ -98,7 +98,14 @@ const translations = {
     noTokens: 'Nenhum token encontrado',
     loadingData: 'Carregando dados...',
     error: 'Erro',
-    success: 'Sucesso'
+    success: 'Sucesso',
+    
+    // Robot
+    robotTitle: 'Robot - Automações',
+    robotDesc: 'Configure estratégias automáticas de compra e venda',
+    newStrategy: 'Nova Estratégia',
+    strategyName: 'Nome da Estratégia',
+    activeStrategies: 'Estratégias Ativas'
   },
   en: {
     // Dashboard
@@ -109,6 +116,7 @@ const translations = {
     settings: 'Settings',
     loading: 'Loading information...',
     home: 'Home',
+    robot: 'Robot',
     
     // Cards Dashboard
     totalPortfolio: 'Total',
@@ -167,7 +175,14 @@ const translations = {
     noTokens: 'No tokens found',
     loadingData: 'Loading data...',
     error: 'Error',
-    success: 'Success'
+    success: 'Success',
+    
+    // Robot
+    robotTitle: 'Robot - Automations',
+    robotDesc: 'Configure automatic buy and sell strategies',
+    newStrategy: 'New Strategy',
+    strategyName: 'Strategy Name',
+    activeStrategies: 'Active Strategies'
   }
 };
 
@@ -195,7 +210,6 @@ function getCurrencyType(symbol) {
 }
 
 async function loadViewData(viewName) {
-  console.log('📂 loadViewData chamado:', viewName);
   try {
     switch(viewName) {
       case 'dashboard':
@@ -213,11 +227,14 @@ async function loadViewData(viewName) {
       case 'settings':
         loadSettingsData();
         break;
+      case 'robot':
+        loadRobotData();
+        break;
       case 'orders':
         // TODO: Implementar carregamento de orders
         break;
       default:
-        console.warn('⚠️ View desconhecida:', viewName);
+        // console.warn('⚠️ View desconhecida:', viewName);
     }
   } catch (error) {
     console.error('❌ Erro em loadViewData:', error);
@@ -227,7 +244,7 @@ async function loadViewData(viewName) {
 // ==================== DASHBOARD ====================
 
 async function loadDashboardData() {
-  console.log('📊 Carregando dados do dashboard...');
+  // console.log('📊 Carregando dados do dashboard...');
   try {
     // Carrega exchanges vinculadas
     const linkedData = await api.getLinkedExchanges();
@@ -249,17 +266,17 @@ async function loadDashboardData() {
       
       // Aguarda o carregamento de todos os tickers antes de finalizar
       if (appState.tickerPromises) {
-        console.log('⏳ Aguardando carregamento de tickers...');
+        // console.log('⏳ Aguardando carregamento de tickers...');
         await appState.tickerPromises;
-        console.log('✅ Todos os tickers carregados');
+        // console.log('✅ Todos os tickers carregados');
       }
     } else {
       // Fallback: renderiza exchanges simples
-      console.warn('⚠️ renderDashboardExchangesWithBalances não encontrada, usando fallback');
+      // console.warn('⚠️ renderDashboardExchangesWithBalances não encontrada, usando fallback');
       renderDashboardExchanges(appState.linkedExchanges);
     }
     
-    console.log('✅ Dashboard carregado com sucesso');
+    // console.log('✅ Dashboard carregado com sucesso');
     
   } catch (error) {
     console.error('❌ Erro ao carregar dashboard:', error);
@@ -405,12 +422,12 @@ async function toggleExchangeDetails(exchangeId) {
 
 // Função para expandir automaticamente exchanges com saldo ao iniciar
 function autoExpandExchanges() {
-  console.log('🔓 Auto-expandindo exchanges...');
-  console.log('📌 hideZeroBalances:', appState.hideZeroBalances);
+  // console.log('🔓 Auto-expandindo exchanges...');
+  // console.log('📌 hideZeroBalances:', appState.hideZeroBalances);
   
   // Usa os dados de balances ao invés de tentar ler o DOM
   if (!appState.balances || !appState.balances.exchanges) {
-    console.log('⚠️ Dados de balances não disponíveis ainda');
+    // console.log('⚠️ Dados de balances não disponíveis ainda');
     return;
   }
   
@@ -419,16 +436,16 @@ function autoExpandExchanges() {
     const totalUSD = exchange.total_usd || 0;
     const hasBalance = totalUSD > 0;
     
-    console.log(`\n📋 Exchange: ${exchange.name} (${exchangeId})`);
-    console.log('  💰 Total USD:', totalUSD);
-    console.log('  💵 Tem saldo?', hasBalance);
+    // console.log(`\n📋 Exchange: ${exchange.name} (${exchangeId})`);
+    // console.log('  💰 Total USD:', totalUSD);
+    // console.log('  💵 Tem saldo?', hasBalance);
     
     const details = document.getElementById(`details-${exchangeId}`);
     const icon = document.getElementById(`toggle-icon-${exchangeId}`);
     const textSpan = icon?.parentElement?.querySelector('span:last-child');
     
     if (!details || !icon) {
-      console.log('  ❌ Elementos DOM não encontrados');
+      // console.log('  ❌ Elementos DOM não encontrados');
       return;
     }
     
@@ -436,17 +453,17 @@ function autoExpandExchanges() {
     // - SEMPRE expande se tem saldo > 0
     // - Expande zeradas SOMENTE se hideZeroBalances estiver FALSE (desmarcado)
     const shouldExpand = hasBalance || !appState.hideZeroBalances;
-    console.log('  🎯 Deve expandir?', shouldExpand);
+    // console.log('  🎯 Deve expandir?', shouldExpand);
     
     if (shouldExpand) {
       details.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
       if (textSpan) textSpan.textContent = 'Fechar detalhes';
       appState.expandedExchanges.add(exchangeId);
-      console.log(`  ✅ EXPANDIDO!`);
+      // console.log(`  ✅ EXPANDIDO!`);
     } else {
       appState.expandedExchanges.delete(exchangeId);
-      console.log(`  ⏭️  Mantido colapsado`);
+      // console.log(`  ⏭️  Mantido colapsado`);
     }
   });
 }
@@ -523,7 +540,7 @@ async function fetchTokenDetailsForExchange(exchangeId, detailsElement) {
 // NOVA FUNÇÃO: Busca tickers de todos os tokens de uma exchange (SEM precisar expandir)
 async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
   try {
-    console.log(`🔄 Buscando tickers para exchange ${exchangeId}...`);
+    // console.log(`🔄 Buscando tickers para exchange ${exchangeId}...`);
     
     const tokenEntries = Object.entries(tokens);
     // Filtra apenas tokens com valor (não exclui mais fiat/stablecoins para busca de ticker)
@@ -538,7 +555,7 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
       appState.tickersLoading.total += tokensWithValue.length;
     }
     
-    console.log(`📊 Exchange ${exchangeId}: ${tokensWithValue.length} tokens para buscar ticker (incluindo todos os ativos)`);
+    // console.log(`📊 Exchange ${exchangeId}: ${tokensWithValue.length} tokens para buscar ticker (incluindo todos os ativos)`);
     
     // Busca tickers em paralelo (máximo 5 por vez para não sobrecarregar)
     const batchSize = 5;
@@ -577,7 +594,7 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
                     );
                   }
                   
-                  console.log(`✅ Ticker atualizado para ${symbol}: 1h=${exchange.tokens[symbol].change_1h}%, 4h=${exchange.tokens[symbol].change_4h}%, 24h=${exchange.tokens[symbol].change_24h}%`);
+                  // console.log(`✅ Ticker atualizado para ${symbol}: 1h=${exchange.tokens[symbol].change_1h}%, 4h=${exchange.tokens[symbol].change_4h}%, 24h=${exchange.tokens[symbol].change_24h}%`);
                   
                   // Atualiza a UI se a exchange estiver expandida
                   const detailsDiv = document.getElementById(`details-${exchangeId}`);
@@ -591,7 +608,7 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
               }
             }
           } catch (error) {
-            console.log(`⚠️ Erro ao buscar ticker para ${symbol}:`, error.message);
+            // console.log(`⚠️ Erro ao buscar ticker para ${symbol}:`, error.message);
           }
         })
       );
@@ -602,7 +619,7 @@ async function fetchAllTokenTickersForExchange(exchangeId, tokens) {
       }
     }
     
-    console.log(`✅ Tickers atualizados para exchange ${exchangeId}`);
+    // console.log(`✅ Tickers atualizados para exchange ${exchangeId}`);
     
   } catch (error) {
     console.error(`❌ Erro ao buscar tickers da exchange ${exchangeId}:`, error);
@@ -615,23 +632,23 @@ async function fetchTokenTicker(exchangeId, symbol, rowElement) {
     // Busca informações completas do token via CCXT
     const result = await api.getTokenTicker(exchangeId, symbol);
     
-    console.log(`✅ Ticker para ${symbol}:`, result);
+    // console.log(`✅ Ticker para ${symbol}:`, result);
     
     if (result && result.symbol) {
-      console.log(`✅ Atualizando row para ${symbol} com dados:`, result);
+      // console.log(`✅ Atualizando row para ${symbol} com dados:`, result);
       // Atualiza a linha do token com informações adicionais
       updateTokenRowWithTicker(rowElement, result);
     } else {
-      console.log(`⚠️ Sem dados de ticker para ${symbol} na exchange ${exchangeId}`);
+      // console.log(`⚠️ Sem dados de ticker para ${symbol} na exchange ${exchangeId}`);
     }
   } catch (error) {
-    console.log(`❌ Erro ao buscar ticker para ${symbol}:`, error);
+    // console.log(`❌ Erro ao buscar ticker para ${symbol}:`, error);
   }
 }
 
 // Função para atualizar linha do token com dados do ticker
 function updateTokenRowWithTicker(rowElement, tokenInfo) {
-  console.log('📝 Atualizando tokenData com:', tokenInfo);
+  // console.log('📝 Atualizando tokenData com:', tokenInfo);
   
   // Pega o símbolo do token
   const symbol = rowElement.getAttribute('data-token-symbol');
@@ -701,13 +718,13 @@ function updateTokenRowWithTicker(rowElement, tokenInfo) {
     contract: tokenInfo.contract
   };
   
-  console.log('📦 Dados salvos no row:', updatedData);
+  // console.log('📦 Dados salvos no row:', updatedData);
   rowElement.setAttribute('data-token-data', JSON.stringify(updatedData));
 }
 
 // Função para mostrar modal de detalhes do token
 async function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
-  console.log('🔍 Abrindo modal para token:', symbol, 'na exchange:', exchangeName);
+  // console.log('🔍 Abrindo modal para token:', symbol, 'na exchange:', exchangeName);
   
   appState.activeTokenModal = { symbol, exchangeId, exchangeName };
   
@@ -718,7 +735,7 @@ async function showTokenModal(symbol, tokenData, exchangeId, exchangeName) {
   try {
     const tickerData = await api.getTokenTicker(exchangeId, symbol);
     
-    console.log('✅ Dados do ticker recebidos:', tickerData);
+    // console.log('✅ Dados do ticker recebidos:', tickerData);
     
     // Atualiza o modal com os dados completos
     updateTokenModalWithData(symbol, tokenData, exchangeName, tickerData);
@@ -819,7 +836,7 @@ function updateTokenModalWithData(symbol, tokenData, exchangeName, tickerData) {
   // Usa preço do ticker se disponível
   const currentPrice = ticker?.price?.current || tokenData.price_usd || 0;
   
-  console.log('📊 Atualizando modal - Preço:', currentPrice, 'Ticker:', hasTicker);
+  // console.log('📊 Atualizando modal - Preço:', currentPrice, 'Ticker:', hasTicker);
   
   // Extrai dados das variações
   const change1h = ticker?.change?.['1h']?.price_change_percent;
@@ -987,6 +1004,14 @@ function attachModalCloseListeners() {
         closeTokenModal();
       }
     });
+    
+    // Adiciona listener para teclas (ESC, Enter, Space, etc.)
+    const keyHandler = (e) => {
+      // Fecha o modal ao pressionar qualquer tecla
+      closeTokenModal();
+      document.removeEventListener('keydown', keyHandler);
+    };
+    document.addEventListener('keydown', keyHandler);
   }
 }
 
@@ -2232,6 +2257,257 @@ function saveSettings() {
   
   showNotification('⚙️ Configurações salvas com sucesso!', 'success');
 }
+
+// ==================== ROBOT (AUTOMAÇÕES) ====================
+
+function loadRobotData() {
+  console.log('🤖 Carregando dados de automações...');
+  
+  // Carrega estratégias salvas do localStorage
+  const strategies = JSON.parse(localStorage.getItem('robotStrategies') || '[]');
+  appState.robotStrategies = strategies;
+  
+  // Carrega exchanges vinculadas para popular o select
+  loadRobotExchanges();
+  
+  // Renderiza as estratégias
+  renderRobotStrategies(strategies);
+  
+  // Atualiza contador
+  updateRobotActiveCount(strategies);
+  
+  // Adiciona event listeners
+  setupRobotEventListeners();
+  
+  console.log('✅ Robot carregado com sucesso');
+}
+
+async function loadRobotExchanges() {
+  try {
+    const linkedData = await api.getLinkedExchanges();
+    const exchanges = linkedData.linked_exchanges || [];
+    
+    const select = document.getElementById('robot-exchange-select');
+    if (select) {
+      select.innerHTML = '<option value="">Selecione uma exchange</option>';
+      exchanges.forEach(exchange => {
+        const option = document.createElement('option');
+        option.value = exchange.exchange_id;
+        option.textContent = exchange.name;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao carregar exchanges para robot:', error);
+  }
+}
+
+function renderRobotStrategies(strategies) {
+  const listContainer = document.getElementById('robot-strategies-list');
+  if (!listContainer) return;
+  
+  if (strategies.length === 0) {
+    listContainer.innerHTML = `
+      <div class="text-center py-12 text-dark-400">
+        <div class="text-6xl mb-4 opacity-50">🤖</div>
+        <p class="text-sm">Nenhuma estratégia criada ainda</p>
+        <p class="text-xs mt-2 opacity-70">Crie sua primeira automação ao lado</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listContainer.innerHTML = strategies.map((strategy, index) => `
+    <div class="p-4 bg-gradient-to-br from-dark-700/50 to-dark-800/50 rounded-xl border ${strategy.active ? 'border-green-500/30' : 'border-dark-600/50'} hover:border-primary-500/50 transition-all">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex-1">
+          <div class="flex items-center space-x-2 mb-1">
+            <h4 class="font-semibold text-dark-100">${strategy.name}</h4>
+            <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${strategy.active ? 'bg-green-500/20 text-green-400' : 'bg-dark-600 text-dark-400'}">
+              ${strategy.active ? '● Ativa' : '○ Pausada'}
+            </span>
+          </div>
+          <p class="text-xs text-dark-400">${strategy.exchange} • ${strategy.pair}</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button class="text-sm px-2 py-1 rounded hover:bg-dark-600 transition-all ${strategy.active ? 'text-yellow-400' : 'text-green-400'}" 
+                  onclick="toggleRobotStrategy(${index})" 
+                  title="${strategy.active ? 'Pausar' : 'Ativar'}">
+            ${strategy.active ? '⏸' : '▶'}
+          </button>
+          <button class="text-sm px-2 py-1 rounded hover:bg-dark-600 transition-all text-red-400" 
+                  onclick="deleteRobotStrategy(${index})" 
+                  title="Excluir">
+            🗑️
+          </button>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <div class="p-2 bg-dark-800/50 rounded-lg">
+          <p class="text-dark-500 mb-1">Tipo</p>
+          <p class="text-dark-200 font-semibold">
+            ${strategy.type === 'buy' ? '🟢 Compra' : strategy.type === 'sell' ? '🔴 Venda' : '🔄 Ambos'}
+          </p>
+        </div>
+        <div class="p-2 bg-dark-800/50 rounded-lg">
+          <p class="text-dark-500 mb-1">Preço Alvo</p>
+          <p class="text-dark-200 font-semibold">${formatCurrency(strategy.targetPrice)}</p>
+        </div>
+        <div class="p-2 bg-dark-800/50 rounded-lg">
+          <p class="text-dark-500 mb-1">Quantidade</p>
+          <p class="text-dark-200 font-semibold">${strategy.amount}</p>
+        </div>
+        <div class="p-2 bg-dark-800/50 rounded-lg">
+          <p class="text-dark-500 mb-1">Status</p>
+          <p class="text-dark-200 font-semibold">
+            ${strategy.executions || 0} execuções
+          </p>
+        </div>
+      </div>
+      
+      ${strategy.stopLoss || strategy.takeProfit ? `
+        <div class="mt-3 pt-3 border-t border-dark-700/50 flex items-center space-x-4 text-xs">
+          ${strategy.stopLoss ? `
+            <div class="flex items-center space-x-1">
+              <span class="text-red-400">🛑</span>
+              <span class="text-dark-400">Stop:</span>
+              <span class="text-red-400 font-semibold">${formatCurrency(strategy.stopLoss)}</span>
+            </div>
+          ` : ''}
+          ${strategy.takeProfit ? `
+            <div class="flex items-center space-x-1">
+              <span class="text-green-400">🎯</span>
+              <span class="text-dark-400">Target:</span>
+              <span class="text-green-400 font-semibold">${formatCurrency(strategy.takeProfit)}</span>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+function updateRobotActiveCount(strategies) {
+  const activeCount = strategies.filter(s => s.active).length;
+  const countElement = document.getElementById('robot-active-count');
+  if (countElement) {
+    countElement.textContent = `${activeCount} ${activeCount === 1 ? 'ativa' : 'ativas'}`;
+    countElement.className = `px-3 py-1 rounded-full text-xs font-semibold ${
+      activeCount > 0 ? 'bg-green-500/20 text-green-400' : 'bg-dark-600 text-dark-400'
+    }`;
+  }
+}
+
+function setupRobotEventListeners() {
+  // Form de criação de estratégia
+  const form = document.getElementById('robot-strategy-form');
+  if (form && !form.dataset.listenerAdded) {
+    form.addEventListener('submit', handleRobotStrategySubmit);
+    form.dataset.listenerAdded = 'true';
+  }
+  
+  // Toggles de Stop Loss e Take Profit
+  const stopLossToggle = document.getElementById('robot-stop-loss-toggle');
+  const takeProfitToggle = document.getElementById('robot-take-profit-toggle');
+  const stopLossInput = document.getElementById('robot-stop-loss');
+  const takeProfitInput = document.getElementById('robot-take-profit');
+  
+  if (stopLossToggle && !stopLossToggle.dataset.listenerAdded) {
+    stopLossToggle.addEventListener('change', (e) => {
+      stopLossInput.disabled = !e.target.checked;
+      if (!e.target.checked) stopLossInput.value = '';
+    });
+    stopLossToggle.dataset.listenerAdded = 'true';
+  }
+  
+  if (takeProfitToggle && !takeProfitToggle.dataset.listenerAdded) {
+    takeProfitToggle.addEventListener('change', (e) => {
+      takeProfitInput.disabled = !e.target.checked;
+      if (!e.target.checked) takeProfitInput.value = '';
+    });
+    takeProfitToggle.dataset.listenerAdded = 'true';
+  }
+}
+
+function handleRobotStrategySubmit(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('robot-strategy-name').value;
+  const exchange = document.getElementById('robot-exchange-select').value;
+  const exchangeName = document.getElementById('robot-exchange-select').selectedOptions[0].text;
+  const pair = document.getElementById('robot-pair').value.toUpperCase();
+  const type = document.getElementById('robot-type').value;
+  const targetPrice = parseFloat(document.getElementById('robot-target-price').value);
+  const amount = parseFloat(document.getElementById('robot-amount').value);
+  const stopLoss = document.getElementById('robot-stop-loss-toggle').checked 
+    ? parseFloat(document.getElementById('robot-stop-loss').value) 
+    : null;
+  const takeProfit = document.getElementById('robot-take-profit-toggle').checked 
+    ? parseFloat(document.getElementById('robot-take-profit').value) 
+    : null;
+  
+  const strategy = {
+    id: Date.now(),
+    name,
+    exchange,
+    exchangeName,
+    pair,
+    type,
+    targetPrice,
+    amount,
+    stopLoss,
+    takeProfit,
+    active: true,
+    executions: 0,
+    createdAt: new Date().toISOString()
+  };
+  
+  // Adiciona ao localStorage
+  const strategies = JSON.parse(localStorage.getItem('robotStrategies') || '[]');
+  strategies.push(strategy);
+  localStorage.setItem('robotStrategies', JSON.stringify(strategies));
+  
+  // Atualiza o appState
+  appState.robotStrategies = strategies;
+  
+  // Renderiza novamente
+  renderRobotStrategies(strategies);
+  updateRobotActiveCount(strategies);
+  
+  // Limpa o formulário
+  e.target.reset();
+  document.getElementById('robot-stop-loss').disabled = true;
+  document.getElementById('robot-take-profit').disabled = true;
+  
+  showNotification('🤖 Estratégia criada com sucesso!', 'success');
+}
+
+window.toggleRobotStrategy = function(index) {
+  const strategies = JSON.parse(localStorage.getItem('robotStrategies') || '[]');
+  if (strategies[index]) {
+    strategies[index].active = !strategies[index].active;
+    localStorage.setItem('robotStrategies', JSON.stringify(strategies));
+    appState.robotStrategies = strategies;
+    renderRobotStrategies(strategies);
+    updateRobotActiveCount(strategies);
+    
+    const status = strategies[index].active ? 'ativada' : 'pausada';
+    showNotification(`🤖 Estratégia ${status}!`, 'success');
+  }
+};
+
+window.deleteRobotStrategy = function(index) {
+  if (confirm('Tem certeza que deseja excluir esta estratégia?')) {
+    const strategies = JSON.parse(localStorage.getItem('robotStrategies') || '[]');
+    strategies.splice(index, 1);
+    localStorage.setItem('robotStrategies', JSON.stringify(strategies));
+    appState.robotStrategies = strategies;
+    renderRobotStrategies(strategies);
+    updateRobotActiveCount(strategies);
+    showNotification('🗑️ Estratégia excluída!', 'success');
+  }
+};
 
 // ==================== MANUAL REFRESH ====================
 

@@ -84,6 +84,9 @@
           <button class="btn-secondary" data-view="exchanges" title="Exchanges">
             🔗
           </button>
+          <button class="btn-secondary" data-view="robot" title="Robot - Automações">
+            🤖
+          </button>
           <button class="btn-secondary" data-view="history" title="Histórico">
             📈
           </button>
@@ -467,6 +470,156 @@
           <button id="save-settings-btn" class="btn-primary w-full">
             💾 Salvar Configurações
           </button>
+        </div>
+      </div>
+
+      <!-- Robot View (Automações) -->
+      <div id="robot-view" class="view hidden" style="min-height: 100%; overflow-y: auto;">
+        <div class="space-y-6">
+          
+          <!-- Header da view Robot -->
+          <div class="card bg-gradient-to-br from-primary-900/30 to-dark-800 border-primary-500/30">
+            <div class="flex items-center space-x-4">
+              <div class="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center text-4xl shadow-lg shadow-primary-500/30">
+                🤖
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-600">
+                  Robot - Automações
+                </h2>
+                <p class="text-sm text-dark-400 mt-1">Configure estratégias automáticas de compra e venda</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid de Cards -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Card: Criar Nova Estratégia -->
+            <div class="card">
+              <div class="flex items-center space-x-3 mb-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center text-2xl">
+                  ➕
+                </div>
+                <div>
+                  <h3 class="font-semibold text-dark-100 text-lg">Nova Estratégia</h3>
+                  <p class="text-xs text-dark-400">Configure uma nova automação</p>
+                </div>
+              </div>
+              
+              <form id="robot-strategy-form" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-dark-300 mb-2">Nome da Estratégia</label>
+                  <input type="text" id="robot-strategy-name" class="input" placeholder="Ex: Compra BTC em queda" required>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-dark-300 mb-2">Exchange</label>
+                  <select id="robot-exchange-select" class="input" required>
+                    <option value="">Selecione uma exchange</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-medium text-dark-300 mb-2">Par de Moedas</label>
+                    <input type="text" id="robot-pair" class="input" placeholder="BTC/USDT" required>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-dark-300 mb-2">Tipo</label>
+                    <select id="robot-type" class="input" required>
+                      <option value="buy">Compra</option>
+                      <option value="sell">Venda</option>
+                      <option value="both">Compra e Venda</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-medium text-dark-300 mb-2">Preço Alvo (USD)</label>
+                    <input type="number" id="robot-target-price" class="input" placeholder="0.00" step="0.01" required>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-dark-300 mb-2">Quantidade</label>
+                    <input type="number" id="robot-amount" class="input" placeholder="0.00" step="0.00001" required>
+                  </div>
+                </div>
+
+                <div class="bg-dark-700/50 p-4 rounded-lg space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-dark-300">Stop Loss</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="robot-stop-loss-toggle" class="sr-only peer">
+                      <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                    </label>
+                  </div>
+                  <input type="number" id="robot-stop-loss" class="input" placeholder="Preço de parada (USD)" step="0.01" disabled>
+                </div>
+
+                <div class="bg-dark-700/50 p-4 rounded-lg space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-dark-300">Take Profit</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="robot-take-profit-toggle" class="sr-only peer">
+                      <div class="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                  </div>
+                  <input type="number" id="robot-take-profit" class="input" placeholder="Preço de lucro (USD)" step="0.01" disabled>
+                </div>
+
+                <button type="submit" class="btn-primary w-full">
+                  ✨ Criar Estratégia
+                </button>
+              </form>
+            </div>
+
+            <!-- Card: Estratégias Ativas -->
+            <div class="card">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                  <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-2xl">
+                    📊
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-dark-100 text-lg">Estratégias Ativas</h3>
+                    <p class="text-xs text-dark-400">Suas automações em execução</p>
+                  </div>
+                </div>
+                <span class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold" id="robot-active-count">
+                  0 ativas
+                </span>
+              </div>
+              
+              <div id="robot-strategies-list" class="space-y-3 max-h-[600px] overflow-y-auto scrollbar-thin">
+                <div class="text-center py-12 text-dark-400">
+                  <div class="text-6xl mb-4 opacity-50">🤖</div>
+                  <p class="text-sm">Nenhuma estratégia criada ainda</p>
+                  <p class="text-xs mt-2 opacity-70">Crie sua primeira automação ao lado</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Histórico de Execuções -->
+          <div class="card">
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-700 rounded-xl flex items-center justify-center text-2xl">
+                📜
+              </div>
+              <div>
+                <h3 class="font-semibold text-dark-100 text-lg">Histórico de Execuções</h3>
+                <p class="text-xs text-dark-400">Últimas operações executadas automaticamente</p>
+              </div>
+            </div>
+            
+            <div id="robot-history-list" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
+              <div class="text-center py-8 text-dark-400">
+                <p class="text-sm">Nenhuma execução ainda</p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 

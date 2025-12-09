@@ -1,6 +1,21 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
+// Previne múltiplas instâncias
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Alguém tentou executar uma segunda instância, focamos nossa janela
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 // Armazenamento de estado (pode usar electron-store para persistência)
 let mainWindow;
 let chartWindow;
@@ -34,8 +49,10 @@ function createWindow() {
     mainWindow.show();
   });
 
+  // Quando a janela for fechada, encerra o app completamente
   mainWindow.on('closed', () => {
     mainWindow = null;
+    app.quit(); // Força o encerramento do Electron
   });
 }
 
@@ -168,11 +185,10 @@ app.whenReady().then(() => {
   });
 });
 
-// Fecha o app quando todas as janelas são fechadas (exceto no macOS)
+// Fecha o app quando todas as janelas são fechadas
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Sempre encerra o app, mesmo no macOS
+  app.quit();
 });
 
 // IPC Handlers - Exemplo de comunicação entre processos
