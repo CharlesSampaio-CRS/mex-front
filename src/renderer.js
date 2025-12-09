@@ -1753,6 +1753,11 @@ function loadSettingsData() {
   
   console.log('📋 Configurações carregadas:', settings);
   
+  // Atualiza appState
+  appState.showBRL = settings.showBRL;
+  appState.language = settings.language;
+  appState.darkMode = settings.darkMode;
+  
   // Aplica configurações aos toggles
   const darkModeToggle = document.getElementById('dark-mode-toggle');
   const showBRLToggle = document.getElementById('show-brl-toggle');
@@ -1761,6 +1766,12 @@ function loadSettingsData() {
   if (darkModeToggle) darkModeToggle.checked = settings.darkMode;
   if (showBRLToggle) showBRLToggle.checked = settings.showBRL;
   if (languageToggle) languageToggle.checked = settings.language === 'en';
+  
+  console.log('🔧 Toggles configurados:', {
+    darkMode: darkModeToggle?.checked,
+    showBRL: showBRLToggle?.checked,
+    language: languageToggle?.checked ? 'en' : 'pt'
+  });
   
   // Atualiza label do idioma
   updateLanguageLabel(settings.language);
@@ -1800,7 +1811,13 @@ function loadSettingsData() {
   if (languageToggle && !languageToggle.dataset.listenerAdded) {
     languageToggle.addEventListener('change', (e) => {
       const lang = e.target.checked ? 'en' : 'pt';
-      console.log('🌐 Idioma alterado:', lang);
+      console.log('🌐 Toggle idioma alterado:', { checked: e.target.checked, lang });
+      
+      // Salva no localStorage
+      localStorage.setItem('language', lang);
+      console.log('💾 Idioma salvo no localStorage:', lang);
+      
+      // Atualiza interface
       updateLanguageLabel(lang);
     });
     languageToggle.dataset.listenerAdded = 'true';
