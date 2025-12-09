@@ -3408,6 +3408,14 @@ function showSearchedTokenModal(tokenInfo) {
     return `$${num.toFixed(2)}`;
   };
   
+  // Função para formatar preço em USD
+  const formatPrice = (value) => {
+    if (!value || value === 0) return '$0.00';
+    if (value < 0.01) return `$${value.toFixed(6)}`; // Mostra mais casas para valores muito pequenos
+    if (value < 1) return `$${value.toFixed(4)}`;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+  
   const contentHTML = `
     <div class="bg-dark-800 rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto scrollbar-thin border border-dark-700 shadow-2xl">
       <!-- Header compacto -->
@@ -3427,7 +3435,7 @@ function showSearchedTokenModal(tokenInfo) {
         <!-- Preço Atual -->
         <div class="bg-dark-700/50 rounded-lg p-2.5 text-center">
           <p class="text-dark-400 text-xs mb-0.5">Preço Atual</p>
-          <p class="text-xl font-bold text-green-400">${formatCurrency(tokenInfo.current_price)}</p>
+          <p class="text-xl font-bold text-green-400">${formatPrice(tokenInfo.current_price)}</p>
         </div>
         
         <!-- Variações 2x2 -->
@@ -3462,11 +3470,11 @@ function showSearchedTokenModal(tokenInfo) {
           </div>
           <div class="flex justify-between pt-1 border-t border-dark-600">
             <span class="text-dark-400">ATH:</span>
-            <span class="text-green-400 font-semibold">${formatCurrency(tokenInfo.ath)}</span>
+            <span class="text-green-400 font-semibold">${formatPrice(tokenInfo.ath)}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-dark-400">ATL:</span>
-            <span class="text-red-400 font-semibold">${formatCurrency(tokenInfo.atl)}</span>
+            <span class="text-red-400 font-semibold">${formatPrice(tokenInfo.atl)}</span>
           </div>
         </div>
         
