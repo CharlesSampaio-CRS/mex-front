@@ -92,8 +92,8 @@ function saveTokenIconsCache() {
   }
 }
 
-// Busca ícone de um token na CoinGecko
-async function fetchTokenIcon(symbol) {
+// Busca ícone de um token na CoinGecko (sem salvar cache)
+async function fetchTokenIcon(symbol, saveCache = true) {
   try {
     // Verifica se já está no cache
     if (appState.tokenIconsCache[symbol]) {
@@ -151,9 +151,14 @@ async function fetchTokenIcon(symbol) {
     
     if (coin && coin.large) {
       console.log(`🖼️ URL do ícone: ${coin.large}`);
-      // Salva no cache
+      // Salva no cache (em memória)
       appState.tokenIconsCache[symbol] = coin.large;
-      saveTokenIconsCache();
+      
+      // Salva no localStorage apenas se solicitado
+      if (saveCache) {
+        saveTokenIconsCache();
+      }
+      
       return coin.large;
     } else {
       console.warn(`⚠️ Moeda encontrada mas sem ícone 'large' para ${symbol}`);
@@ -166,36 +171,60 @@ async function fetchTokenIcon(symbol) {
   }
 }
 
-// Busca ícones de múltiplos tokens em lote
+// Busca ícones de múltiplos tokens em lote (otimizado com paralelismo)
 async function fetchMultipleTokenIcons(symbols, onProgress = null) {
   console.log(`🚀 Iniciando busca de ícones para ${symbols.length} tokens:`, symbols);
   
   const results = {};
   let completed = 0;
   
-  for (const symbol of symbols) {
-    // Pula moedas fiat e stablecoins comuns
+  // Define quantas requisições paralelas (batch)
+  const BATCH_SIZE = 5; // 5 requisições ao mesmo tempo
+  const DELAY_BETWEEN_BATCHES = 100; // 100ms entre lotes (reduzido de 300ms)
+  
+  // Filtra tokens válidos
+  const validSymbols = symbols.filter(symbol => {
     if (FIAT_CURRENCIES.includes(symbol) || STABLECOINS.includes(symbol)) {
       console.log(`⏩ Pulando ${symbol} (fiat/stablecoin)`);
-      continue;
+      return false;
     }
+    return true;
+  });
+  
+  console.log(`📋 ${validSymbols.length} tokens válidos para buscar`);
+  
+  // Processa em lotes
+  for (let i = 0; i < validSymbols.length; i += BATCH_SIZE) {
+    const batch = validSymbols.slice(i, i + BATCH_SIZE);
     
-    const icon = await fetchTokenIcon(symbol);
-    if (icon) {
-      results[symbol] = icon;
+    // Busca todos do lote em paralelo
+    const promises = batch.map(symbol => fetchTokenIcon(symbol, false)); // false = não salva cache individualmente
+    const batchResults = await Promise.all(promises);
+    
+    // Processa resultados do lote
+    batch.forEach((symbol, index) => {
+      const icon = batchResults[index];
+      if (icon) {
+        results[symbol] = icon;
+      }
+      
+      completed++;
+      if (onProgress) {
+        onProgress(completed, validSymbols.length);
+      }
+    });
+    
+    // Delay apenas entre lotes (não entre cada token)
+    if (i + BATCH_SIZE < validSymbols.length) {
+      await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
     }
-    
-    completed++;
-    if (onProgress) {
-      onProgress(completed, symbols.length);
-    }
-    
-    // Delay entre requisições para não sobrecarregar a API
-    await new Promise(resolve => setTimeout(resolve, 300));
   }
   
+  // Salva cache uma única vez ao final
+  saveTokenIconsCache();
+  
   console.log(`✅ Busca concluída! ${Object.keys(results).length} ícones encontrados`);
-  console.log('Cache atual:', appState.tokenIconsCache);
+  console.log('Cache atual:', Object.keys(appState.tokenIconsCache).length, 'ícones');
   
   return results;
 }
@@ -3745,7 +3774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadTokenIconsCache();
     console.log('📦 Cache de ícones carregado:', appState.tokenIconsCache);
     
-    // Busca ícones de tokens em background (não bloqueia UI)
+    // Busca ícones de tokens ANTES de mostrar a tela
     if (appState.balances && appState.balances.exchanges) {
       const allTokenSymbols = new Set();
       appState.balances.exchanges.forEach(ex => {
@@ -3764,21 +3793,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (allTokenSymbols.size > 0) {
         console.log(`🔍 Iniciando busca de ícones...`);
-        // Busca em background sem bloquear
-        fetchMultipleTokenIcons(Array.from(allTokenSymbols), (completed, total) => {
+        
+        // AGUARDA a busca completar antes de continuar
+        await fetchMultipleTokenIcons(Array.from(allTokenSymbols), (completed, total) => {
+          // Atualiza a barra de progresso durante a busca
+          const progress = 70 + (completed / total) * 20; // 70% -> 90%
+          loadingProgress.style.width = `${progress}%`;
+          loadingMessage.textContent = `Carregando ícones... (${completed}/${total})`;
           console.log(`📦 Progresso: ${completed}/${total}`);
-        }).then(() => {
-          console.log('✅ Todos os ícones carregados! Renderizando dashboard...');
-          // Re-renderiza o dashboard com os ícones
-          if (appState.balances) {
-            renderDashboardExchangesWithBalances(appState.linkedExchanges, appState.balances, {
-              skipTickerRefresh: true,
-              autoExpand: false
-            });
-          }
-        }).catch(err => {
-          console.error('❌ Erro ao buscar ícones:', err);
         });
+        
+        console.log('✅ Todos os ícones carregados! Renderizando dashboard...');
+        
+        // Re-renderiza o dashboard com os ícones
+        if (appState.balances) {
+          renderDashboardExchangesWithBalances(appState.linkedExchanges, appState.balances, {
+            skipTickerRefresh: true,
+            autoExpand: false
+          });
+        }
       } else {
         console.log('⚠️ Nenhum token para buscar ícones');
       }
@@ -3788,7 +3821,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Atualiza timestamp
     loadingMessage.textContent = 'Finalizando...';
-    loadingProgress.style.width = '80%';
+    loadingProgress.style.width = '95%';
     setInterval(updateTimestamp, 1000);
     updateTimestamp();
     console.log('✅ Timestamp iniciado');
