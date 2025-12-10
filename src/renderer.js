@@ -22,7 +22,8 @@ const appState = {
   exchangeDetailsCache: {},
   robotStrategies: [],
   domCache: {},
-  tokenIconsCache: {} // Cache de ícones dos tokens
+  tokenIconsCache: {}, // Cache de ícones dos tokens
+  tokenDataCache: {} // Cache de dados dos tokens (preço, variações, etc)
 };
 
 const FIAT_CURRENCIES = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'ARS', 'MXN'];
@@ -136,17 +137,24 @@ async function fetchTokenIcon(symbol, saveCache = true) {
     }
     
     // Procura correspondência exata do símbolo primeiro
-    let coin = data.coins.find(c => 
+    // Se houver múltiplos, prioriza o com melhor market_cap_rank
+    const exactMatches = data.coins.filter(c => 
       c.symbol.toUpperCase() === symbol.toUpperCase() ||
       c.symbol.toUpperCase() === searchTerm.toUpperCase()
     );
     
-    // Se não encontrar, usa o primeiro resultado
-    if (!coin) {
+    let coin;
+    if (exactMatches.length > 0) {
+      // Se há múltiplos matches, pega o com melhor ranking (menor número = melhor)
+      coin = exactMatches.sort((a, b) => {
+        if (a.market_cap_rank === null) return 1;
+        if (b.market_cap_rank === null) return -1;
+        return a.market_cap_rank - b.market_cap_rank;
+      })[0];
+      console.log(`✅ Match exato encontrado: ${coin.name} (${coin.symbol}) - Rank: ${coin.market_cap_rank || 'N/A'}`);
+    } else {
       coin = data.coins[0];
       console.log(`ℹ️ Usando primeiro resultado para ${symbol}: ${coin.name} (${coin.symbol})`);
-    } else {
-      console.log(`✅ Match exato encontrado: ${coin.name} (${coin.symbol})`);
     }
     
     if (coin && coin.large) {
@@ -178,20 +186,19 @@ async function fetchMultipleTokenIcons(symbols, onProgress = null) {
   const results = {};
   let completed = 0;
   
-  // Define quantas requisições paralelas (batch)
-  const BATCH_SIZE = 5; // 5 requisições ao mesmo tempo
-  const DELAY_BETWEEN_BATCHES = 100; // 100ms entre lotes (reduzido de 300ms)
+  // Define quantas requisições paralelas (batch) - AUMENTADO
+  const BATCH_SIZE = 10; // 10 requisições ao mesmo tempo (era 5)
+  const DELAY_BETWEEN_BATCHES = 50; // 50ms entre lotes (era 100ms)
   
-  // Filtra tokens válidos
+  // Filtra tokens válidos (já filtrados apenas com valor)
   const validSymbols = symbols.filter(symbol => {
     if (FIAT_CURRENCIES.includes(symbol) || STABLECOINS.includes(symbol)) {
-      console.log(`⏩ Pulando ${symbol} (fiat/stablecoin)`);
       return false;
     }
     return true;
   });
   
-  console.log(`📋 ${validSymbols.length} tokens válidos para buscar`);
+  console.log(`📋 ${validSymbols.length} ícones para buscar`);
   
   // Processa em lotes
   for (let i = 0; i < validSymbols.length; i += BATCH_SIZE) {
@@ -232,6 +239,160 @@ async function fetchMultipleTokenIcons(symbols, onProgress = null) {
 // Obtém ícone do token (cache ou fallback)
 function getTokenIcon(symbol) {
   return appState.tokenIconsCache[symbol] || null;
+}
+
+// ========== FUNÇÕES PARA BUSCAR DADOS DOS TOKENS (VARIAÇÕES) ==========
+
+// Busca dados completos de um token na CoinGecko (preço, variações, etc)
+async function fetchTokenData(symbol, coinId = null) {
+  try {
+    // Verifica cache (válido por 5 minutos)
+    const cached = appState.tokenDataCache[symbol];
+    if (cached && (Date.now() - cached.timestamp < 5 * 60 * 1000)) {
+      console.log(`✅ Dados de ${symbol} no cache`);
+      return cached.data;
+    }
+
+    console.log(`🔍 Buscando dados de ${symbol} na CoinGecko...`);
+
+    // Se não tiver coinId, busca primeiro
+    if (!coinId) {
+      const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${symbol}`);
+      if (!searchResponse.ok) {
+        console.warn(`⚠️ Erro ao buscar coinId de ${symbol}: ${searchResponse.status}`);
+        return null;
+      }
+      
+      const searchData = await searchResponse.json();
+      
+      // Procura matches exatos do símbolo
+      const exactMatches = searchData.coins?.filter(c => c.symbol.toUpperCase() === symbol.toUpperCase()) || [];
+      
+      let coin;
+      if (exactMatches.length > 0) {
+        // Se há múltiplos matches, pega o com melhor ranking
+        coin = exactMatches.sort((a, b) => {
+          if (a.market_cap_rank === null) return 1;
+          if (b.market_cap_rank === null) return -1;
+          return a.market_cap_rank - b.market_cap_rank;
+        })[0];
+        console.log(`📋 Match exato: ${coin.name} (${coin.symbol}) - Rank: ${coin.market_cap_rank || 'N/A'}`);
+      } else {
+        coin = searchData.coins?.[0];
+        console.log(`📋 Usando primeiro resultado: ${coin?.name || 'N/A'}`);
+      }
+      
+      if (!coin) {
+        console.warn(`⚠️ Coin ID não encontrado para ${symbol}`);
+        return null;
+      }
+      
+      coinId = coin.id;
+      console.log(`📋 Coin ID selecionado: ${coinId}`);
+    }
+
+    // Busca dados detalhados do token
+    const dataResponse = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`
+    );
+    
+    if (!dataResponse.ok) {
+      console.warn(`⚠️ Erro ao buscar dados de ${symbol}: ${dataResponse.status}`);
+      return null;
+    }
+    
+    const data = await dataResponse.json();
+    
+    // Extrai as informações relevantes
+    const tokenData = {
+      symbol: symbol,
+      coinId: coinId,
+      name: data.name,
+      price_usd: data.market_data?.current_price?.usd || 0,
+      price_brl: data.market_data?.current_price?.brl || 0,
+      change_1h: data.market_data?.price_change_percentage_1h_in_currency?.usd || 0,
+      change_24h: data.market_data?.price_change_percentage_24h || 0,
+      change_7d: data.market_data?.price_change_percentage_7d || 0,
+      change_30d: data.market_data?.price_change_percentage_30d || 0,
+      market_cap: data.market_data?.market_cap?.usd || 0,
+      volume_24h: data.market_data?.total_volume?.usd || 0,
+      image: data.image?.large || null
+    };
+    
+    // Salva no cache
+    appState.tokenDataCache[symbol] = {
+      data: tokenData,
+      timestamp: Date.now()
+    };
+    
+    console.log(`✅ Dados de ${symbol} obtidos:`, tokenData);
+    
+    return tokenData;
+  } catch (error) {
+    console.error(`❌ Erro ao buscar dados do token ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Busca dados de múltiplos tokens em paralelo
+async function fetchMultipleTokensData(symbols, onProgress = null) {
+  console.log(`🚀 Buscando dados de ${symbols.length} tokens...`);
+  
+  const results = {};
+  let completed = 0;
+  
+  const BATCH_SIZE = 5; // Aumentado de 3 para 5
+  const DELAY_BETWEEN_BATCHES = 100; // Reduzido de 200ms para 100ms
+  
+  // Filtra tokens válidos (já filtrados apenas com valor)
+  const validSymbols = symbols.filter(symbol => {
+    if (FIAT_CURRENCIES.includes(symbol) || STABLECOINS.includes(symbol)) {
+      return false;
+    }
+    return true;
+  });
+  
+  console.log(`📋 ${validSymbols.length} dados para buscar`);
+  
+  // Processa em lotes
+  for (let i = 0; i < validSymbols.length; i += BATCH_SIZE) {
+    const batch = validSymbols.slice(i, i + BATCH_SIZE);
+    
+    // Busca todos do lote em paralelo
+    const promises = batch.map(symbol => fetchTokenData(symbol));
+    const batchResults = await Promise.all(promises);
+    
+    // Processa resultados do lote
+    batch.forEach((symbol, index) => {
+      const data = batchResults[index];
+      if (data) {
+        results[symbol] = data;
+      }
+      
+      completed++;
+      if (onProgress) {
+        onProgress(completed, validSymbols.length);
+      }
+    });
+    
+    // Delay entre lotes
+    if (i + BATCH_SIZE < validSymbols.length) {
+      await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+    }
+  }
+  
+  console.log(`✅ Dados obtidos! ${Object.keys(results).length} tokens com dados`);
+  
+  return results;
+}
+
+// Obtém dados do token do cache
+function getTokenData(symbol) {
+  const cached = appState.tokenDataCache[symbol];
+  if (cached && (Date.now() - cached.timestamp < 5 * 60 * 1000)) {
+    return cached.data;
+  }
+  return null;
 }
 
 const translations = {
@@ -517,10 +678,13 @@ function renderTokensList(tokens, exchangeId, exchangeName) {
         const currencyInfo = getCurrencyType(symbol);
         const isFiatStable = currencyInfo !== null;
         
-        // Extrai variações se já tiverem sido carregadas
-        const change1h = token.change_1h;
-        const change4h = token.change_4h;
-        const change24h = token.change_24h;
+        // Busca dados da CoinGecko (se disponíveis)
+        const coingeckoData = getTokenData(symbol);
+        
+        // Usa variações da CoinGecko se disponíveis, senão usa as da exchange
+        const change1h = coingeckoData?.change_1h ?? token.change_1h;
+        const change24h = coingeckoData?.change_24h ?? token.change_24h;
+        const change7d = coingeckoData?.change_7d;
         
         // Busca ícone do cache
         const tokenIcon = getTokenIcon(symbol);
@@ -555,18 +719,18 @@ function renderTokensList(tokens, exchangeId, exchangeName) {
                       </span>
                     ` : `
                       ${change1h !== undefined && change1h !== null ? `
-                        <span class="text-[10px] px-1 py-0.5 rounded ${change1h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="1 hora">
+                        <span class="text-[10px] px-1 py-0.5 rounded ${change1h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="Variação 1 hora">
                           1h: ${change1h >= 0 ? '▲' : '▼'}${Math.abs(change1h).toFixed(1)}%
                         </span>
                       ` : ''}
-                      ${change4h !== undefined && change4h !== null ? `
-                        <span class="text-[10px] px-1 py-0.5 rounded ${change4h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="4 horas">
-                          4h: ${change4h >= 0 ? '▲' : '▼'}${Math.abs(change4h).toFixed(1)}%
+                      ${change24h !== undefined && change24h !== null ? `
+                        <span class="text-[10px] px-1 py-0.5 rounded ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="Variação 24 horas">
+                          24h: ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(1)}%
                         </span>
                       ` : ''}
-                      ${change24h !== undefined && change24h !== null ? `
-                        <span class="text-[10px] px-1 py-0.5 rounded ${change24h >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="24 horas">
-                          24h: ${change24h >= 0 ? '▲' : '▼'}${Math.abs(change24h).toFixed(1)}%
+                      ${change7d !== undefined && change7d !== null ? `
+                        <span class="text-[10px] px-1 py-0.5 rounded ${change7d >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}" title="Variação 7 dias">
+                          7d: ${change7d >= 0 ? '▲' : '▼'}${Math.abs(change7d).toFixed(1)}%
                         </span>
                       ` : ''}
                     `}
@@ -3770,40 +3934,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Carrega cache de ícones
     loadingMessage.textContent = 'Carregando ícones dos tokens...';
-    loadingProgress.style.width = '70%';
+    loadingProgress.style.width = '65%';
     loadTokenIconsCache();
     console.log('📦 Cache de ícones carregado:', appState.tokenIconsCache);
     
-    // Busca ícones de tokens ANTES de mostrar a tela
+    // Busca ícones e dados de tokens ANTES de mostrar a tela
     if (appState.balances && appState.balances.exchanges) {
       const allTokenSymbols = new Set();
       appState.balances.exchanges.forEach(ex => {
         if (ex.tokens) {
-          Object.keys(ex.tokens).forEach(symbol => {
-            // Só busca ícones de criptomoedas (não fiat/stablecoins)
-            if (!FIAT_CURRENCIES.includes(symbol) && !STABLECOINS.includes(symbol)) {
+          Object.entries(ex.tokens).forEach(([symbol, token]) => {
+            // Só busca de criptomoedas (não fiat/stablecoins) QUE TENHAM VALOR
+            if (!FIAT_CURRENCIES.includes(symbol) && 
+                !STABLECOINS.includes(symbol) && 
+                token.value_usd > 0) {
               allTokenSymbols.add(symbol);
             }
           });
         }
       });
       
-      console.log(`📋 Total de tokens para buscar ícones: ${allTokenSymbols.size}`);
+      console.log(`📋 Total de tokens COM VALOR para buscar: ${allTokenSymbols.size}`);
       console.log('Tokens:', Array.from(allTokenSymbols));
       
       if (allTokenSymbols.size > 0) {
-        console.log(`🔍 Iniciando busca de ícones...`);
+        const tokensArray = Array.from(allTokenSymbols);
         
-        // AGUARDA a busca completar antes de continuar
-        await fetchMultipleTokenIcons(Array.from(allTokenSymbols), (completed, total) => {
-          // Atualiza a barra de progresso durante a busca
-          const progress = 70 + (completed / total) * 20; // 70% -> 90%
+        // Busca APENAS ícones (mais rápido)
+        console.log(`�️ Buscando ${tokensArray.length} ícones...`);
+        
+        await fetchMultipleTokenIcons(tokensArray, (completed, total) => {
+          const progress = 65 + (completed / total) * 25;
           loadingProgress.style.width = `${progress}%`;
           loadingMessage.textContent = `Carregando ícones... (${completed}/${total})`;
-          console.log(`📦 Progresso: ${completed}/${total}`);
         });
         
-        console.log('✅ Todos os ícones carregados! Renderizando dashboard...');
+        console.log('✅ Ícones carregados!');
         
         // Re-renderiza o dashboard com os ícones
         if (appState.balances) {
@@ -3812,8 +3978,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             autoExpand: false
           });
         }
+        
+        // Busca dados em BACKGROUND (não bloqueia)
+        fetchMultipleTokensData(tokensArray).then(() => {
+          console.log('✅ Dados carregados em background');
+          // Re-renderiza com os dados
+          if (appState.balances) {
+            renderDashboardExchangesWithBalances(appState.linkedExchanges, appState.balances, {
+              skipTickerRefresh: true,
+              autoExpand: false
+            });
+          }
+        });
       } else {
-        console.log('⚠️ Nenhum token para buscar ícones');
+        console.log('⚠️ Nenhum token com valor para buscar');
       }
     } else {
       console.log('⚠️ Sem balances para buscar ícones');
