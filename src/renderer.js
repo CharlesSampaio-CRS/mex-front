@@ -21,7 +21,8 @@ const appState = {
   activeTokenModal: null,
   exchangeDetailsCache: {},
   robotStrategies: [],
-  domCache: {}
+  domCache: {},
+  tokenIconsCache: {} // Cache de ícones dos tokens
 };
 
 const FIAT_CURRENCIES = ['BRL', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'ARS', 'MXN'];
@@ -61,6 +62,148 @@ const getCachedElement = (selector) => {
 const clearDOMCache = () => {
   appState.domCache = {};
 };
+
+// ========================================
+// Token Icons Cache Functions
+// ========================================
+
+// Carrega cache de ícones do localStorage
+function loadTokenIconsCache() {
+  try {
+    const cached = localStorage.getItem('tokenIconsCache');
+    if (cached) {
+      appState.tokenIconsCache = JSON.parse(cached);
+      console.log('📦 Cache de ícones carregado:', Object.keys(appState.tokenIconsCache).length, 'tokens');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao carregar cache de ícones:', error);
+    appState.tokenIconsCache = {};
+  }
+}
+
+// Salva cache de ícones no localStorage
+function saveTokenIconsCache() {
+  try {
+    const cacheSize = Object.keys(appState.tokenIconsCache).length;
+    localStorage.setItem('tokenIconsCache', JSON.stringify(appState.tokenIconsCache));
+    console.log(`💾 Cache salvo com ${cacheSize} ícones`);
+  } catch (error) {
+    console.error('❌ Erro ao salvar cache de ícones:', error);
+  }
+}
+
+// Busca ícone de um token na CoinGecko
+async function fetchTokenIcon(symbol) {
+  try {
+    // Verifica se já está no cache
+    if (appState.tokenIconsCache[symbol]) {
+      console.log(`✅ Ícone de ${symbol} encontrado no cache`);
+      return appState.tokenIconsCache[symbol];
+    }
+
+    console.log(`🔍 Buscando ícone de ${symbol} na CoinGecko...`);
+
+    // Remove sufixos comuns (COIN, TOKEN) para melhorar busca
+    const searchTerms = [
+      symbol,
+      symbol.replace(/COIN$/i, ''),  // REKTCOIN -> REKT
+      symbol.replace(/TOKEN$/i, ''), // XTOKEN -> X
+    ];
+    
+    let data = null;
+    let searchTerm = symbol;
+    
+    // Tenta cada variação até encontrar resultados
+    for (const term of searchTerms) {
+      const response = await fetch(`https://api.coingecko.com/api/v3/search?query=${term}`);
+      if (!response.ok) {
+        console.warn(`⚠️ Erro ao buscar ${term}: ${response.status}`);
+        continue;
+      }
+      
+      const result = await response.json();
+      if (result.coins && result.coins.length > 0) {
+        data = result;
+        searchTerm = term;
+        console.log(`📊 API retornou ${result.coins.length} resultados para ${term}`);
+        break;
+      }
+    }
+    
+    if (!data || !data.coins || data.coins.length === 0) {
+      console.warn(`⚠️ Nenhum resultado encontrado para ${symbol} (tentou: ${searchTerms.join(', ')})`);
+      return null;
+    }
+    
+    // Procura correspondência exata do símbolo primeiro
+    let coin = data.coins.find(c => 
+      c.symbol.toUpperCase() === symbol.toUpperCase() ||
+      c.symbol.toUpperCase() === searchTerm.toUpperCase()
+    );
+    
+    // Se não encontrar, usa o primeiro resultado
+    if (!coin) {
+      coin = data.coins[0];
+      console.log(`ℹ️ Usando primeiro resultado para ${symbol}: ${coin.name} (${coin.symbol})`);
+    } else {
+      console.log(`✅ Match exato encontrado: ${coin.name} (${coin.symbol})`);
+    }
+    
+    if (coin && coin.large) {
+      console.log(`🖼️ URL do ícone: ${coin.large}`);
+      // Salva no cache
+      appState.tokenIconsCache[symbol] = coin.large;
+      saveTokenIconsCache();
+      return coin.large;
+    } else {
+      console.warn(`⚠️ Moeda encontrada mas sem ícone 'large' para ${symbol}`);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`❌ Erro ao buscar ícone do token ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Busca ícones de múltiplos tokens em lote
+async function fetchMultipleTokenIcons(symbols, onProgress = null) {
+  console.log(`🚀 Iniciando busca de ícones para ${symbols.length} tokens:`, symbols);
+  
+  const results = {};
+  let completed = 0;
+  
+  for (const symbol of symbols) {
+    // Pula moedas fiat e stablecoins comuns
+    if (FIAT_CURRENCIES.includes(symbol) || STABLECOINS.includes(symbol)) {
+      console.log(`⏩ Pulando ${symbol} (fiat/stablecoin)`);
+      continue;
+    }
+    
+    const icon = await fetchTokenIcon(symbol);
+    if (icon) {
+      results[symbol] = icon;
+    }
+    
+    completed++;
+    if (onProgress) {
+      onProgress(completed, symbols.length);
+    }
+    
+    // Delay entre requisições para não sobrecarregar a API
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+  
+  console.log(`✅ Busca concluída! ${Object.keys(results).length} ícones encontrados`);
+  console.log('Cache atual:', appState.tokenIconsCache);
+  
+  return results;
+}
+
+// Obtém ícone do token (cache ou fallback)
+function getTokenIcon(symbol) {
+  return appState.tokenIconsCache[symbol] || null;
+}
 
 const translations = {
   pt: {
@@ -350,6 +493,9 @@ function renderTokensList(tokens, exchangeId, exchangeName) {
         const change4h = token.change_4h;
         const change24h = token.change_24h;
         
+        // Busca ícone do cache
+        const tokenIcon = getTokenIcon(symbol);
+        
         return `
           <div class="token-row"
                data-token-symbol="${symbol}"
@@ -357,9 +503,16 @@ function renderTokensList(tokens, exchangeId, exchangeName) {
                data-exchange-name="${exchangeName}"
                data-token-data='${JSON.stringify(token).replace(/'/g, "&apos;")}'>
             <div class="col-span-2 flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br ${hasValue ? 'from-primary-600 to-primary-700' : 'from-dark-600 to-dark-700'} flex items-center justify-center text-xs font-bold shadow-md">
-                ${symbol.substring(0, 2)}
-              </div>
+              ${tokenIcon ? `
+                <img src="${tokenIcon}" alt="${symbol}" class="w-8 h-8 rounded-full shadow-md" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br ${hasValue ? 'from-primary-600 to-primary-700' : 'from-dark-600 to-dark-700'} flex items-center justify-center text-xs font-bold shadow-md" style="display: none;">
+                  ${symbol.substring(0, 2)}
+                </div>
+              ` : `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br ${hasValue ? 'from-primary-600 to-primary-700' : 'from-dark-600 to-dark-700'} flex items-center justify-center text-xs font-bold shadow-md">
+                  ${symbol.substring(0, 2)}
+                </div>
+              `}
               <div class="flex-1">
                 <div class="flex items-center space-x-2">
                   <span class="font-semibold ${hasValue ? 'text-dark-100' : 'text-dark-400'}">${symbol}</span>
@@ -1164,8 +1317,30 @@ function updateDashboardBalances(balances) {
   // Cache elementos do DOM
   const totalEl = getCachedElement('#dashboard-total');
   
-  // Atualiza total geral
-  if (totalEl) totalEl.textContent = formatCurrency(totalUSD);
+  // Função para formatar USD (dólares americanos)
+  const formatUSD = (value) => {
+    if (!value || value === 0) return '$0.00';
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+  
+  // Função para formatar BRL (reais brasileiros)
+  const formatBRL = (value) => {
+    if (!value || value === 0) return 'R$ 0,00';
+    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+  
+  // Taxa de conversão USD para BRL (você pode atualizar isso via API no futuro)
+  const USD_TO_BRL_RATE = 5.07;
+  
+  // Atualiza total geral (USD ou BRL dependendo do estado)
+  if (totalEl) {
+    if (appState.showBRL) {
+      const totalBRL = totalUSD * USD_TO_BRL_RATE;
+      totalEl.textContent = formatBRL(totalBRL);
+    } else {
+      totalEl.textContent = formatUSD(totalUSD);
+    }
+  }
   
   // Calcula totais de BRL, USDT e USDC
   let totalBRL = 0;
@@ -2694,6 +2869,21 @@ function setupEventListeners() {
     });
   }
   
+  // Clique no card Total para alternar entre USD e BRL
+  // Usa event delegation no documento para garantir que funciona após reordenação
+  document.addEventListener('click', (e) => {
+    const totalCard = e.target.closest('[id*="dashboard-total"]')?.parentElement?.parentElement;
+    if (totalCard && totalCard.classList.contains('cursor-pointer')) {
+      // Alterna estado
+      appState.showBRL = !appState.showBRL;
+      
+      // Atualiza o display
+      if (appState.balances) {
+        updateDashboardBalances(appState.balances);
+      }
+    }
+  });
+  
   // Botões de período do histórico
   document.querySelectorAll('.period-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -3411,8 +3601,20 @@ function showSearchedTokenModal(tokenInfo) {
   // Função para formatar preço em USD
   const formatPrice = (value) => {
     if (!value || value === 0) return '$0.00';
-    if (value < 0.01) return `$${value.toFixed(6)}`; // Mostra mais casas para valores muito pequenos
+    
+    // Para valores extremamente pequenos (< 0.0000000001), mostrar 10 decimais
+    if (value < 0.0000000001) return `$${value.toFixed(10)}`;
+    
+    // Para valores muito pequenos (< 0.000001), mostrar 8 decimais
+    if (value < 0.000001) return `$${value.toFixed(8)}`;
+    
+    // Para valores pequenos (< 0.01), mostrar 6 decimais
+    if (value < 0.01) return `$${value.toFixed(6)}`;
+    
+    // Para valores menores que 1, mostrar 4 decimais
     if (value < 1) return `$${value.toFixed(4)}`;
+    
+    // Para valores maiores ou iguais a 1, mostrar 2 decimais
     return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
   
@@ -3536,6 +3738,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadingProgress.style.width = '60%';
     await switchView('dashboard');
     console.log('✅ Dashboard carregado');
+    
+    // Carrega cache de ícones
+    loadingMessage.textContent = 'Carregando ícones dos tokens...';
+    loadingProgress.style.width = '70%';
+    loadTokenIconsCache();
+    console.log('📦 Cache de ícones carregado:', appState.tokenIconsCache);
+    
+    // Busca ícones de tokens em background (não bloqueia UI)
+    if (appState.balances && appState.balances.exchanges) {
+      const allTokenSymbols = new Set();
+      appState.balances.exchanges.forEach(ex => {
+        if (ex.tokens) {
+          Object.keys(ex.tokens).forEach(symbol => {
+            // Só busca ícones de criptomoedas (não fiat/stablecoins)
+            if (!FIAT_CURRENCIES.includes(symbol) && !STABLECOINS.includes(symbol)) {
+              allTokenSymbols.add(symbol);
+            }
+          });
+        }
+      });
+      
+      console.log(`📋 Total de tokens para buscar ícones: ${allTokenSymbols.size}`);
+      console.log('Tokens:', Array.from(allTokenSymbols));
+      
+      if (allTokenSymbols.size > 0) {
+        console.log(`🔍 Iniciando busca de ícones...`);
+        // Busca em background sem bloquear
+        fetchMultipleTokenIcons(Array.from(allTokenSymbols), (completed, total) => {
+          console.log(`📦 Progresso: ${completed}/${total}`);
+        }).then(() => {
+          console.log('✅ Todos os ícones carregados! Renderizando dashboard...');
+          // Re-renderiza o dashboard com os ícones
+          if (appState.balances) {
+            renderDashboardExchangesWithBalances(appState.linkedExchanges, appState.balances, {
+              skipTickerRefresh: true,
+              autoExpand: false
+            });
+          }
+        }).catch(err => {
+          console.error('❌ Erro ao buscar ícones:', err);
+        });
+      } else {
+        console.log('⚠️ Nenhum token para buscar ícones');
+      }
+    } else {
+      console.log('⚠️ Sem balances para buscar ícones');
+    }
     
     // Atualiza timestamp
     loadingMessage.textContent = 'Finalizando...';

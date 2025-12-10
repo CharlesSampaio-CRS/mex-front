@@ -47,6 +47,7 @@ function createWindow() {
   // Mostra a janela quando estiver pronta
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    // Descomente para debug: mainWindow.webContents.openDevTools();
   });
 
   // Quando a janela for fechada, encerra o app completamente
